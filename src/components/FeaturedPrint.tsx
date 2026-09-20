@@ -34,7 +34,7 @@ export function FeaturedPrint({
           {photo ? formatBatchLabel(photo.batchYear) : "The nest is waiting"}
         </p>
         <p className="mt-1 text-h3 font-medium tracking-wordmark">
-          {photo?.caption || (photo ? "Most remembered" : "Open a year album")}
+          {photo?.caption || (photo ? "Most remembered" : "The album is empty")}
         </p>
         {photo ? (
           <Link
@@ -57,7 +57,7 @@ export function FeaturedPrint({
             href="/join"
             className="mt-4 flex min-h-11 items-center justify-between rounded-full bg-surface px-4 text-caption text-ink"
           >
-            Join and add a print
+            Join to add a photograph
             <span aria-hidden>→</span>
           </Link>
         )}

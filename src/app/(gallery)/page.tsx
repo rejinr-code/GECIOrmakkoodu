@@ -26,7 +26,14 @@ import {
 import { getSession, isVerified } from "@/lib/session";
 
 type HomeProps = {
-  searchParams: Promise<{ year?: string; branch?: string; page?: string; event?: string; view?: string }>;
+  searchParams: Promise<{
+    year?: string;
+    branch?: string;
+    page?: string;
+    event?: string;
+    view?: string;
+    albums?: string;
+  }>;
 };
 
 export default async function Home({ searchParams }: HomeProps) {
@@ -41,8 +48,9 @@ export default async function Home({ searchParams }: HomeProps) {
   const session = await getSession();
 
   if (collection) {
+    const showAllAlbums = params.albums === "all";
     const [albums, remembered, articles] = await Promise.all([
-      listYearAlbums(8),
+      listYearAlbums(showAllAlbums ? undefined : 8),
       listRememberedPhotos(12),
       listPublishedArticles(4),
     ]);
@@ -62,8 +70,8 @@ export default async function Home({ searchParams }: HomeProps) {
                   A collection of campus years
                 </h1>
                 <p className="mt-3 max-w-lg text-muted">
-                  Prints GECIANs still look at. Open a year album, or remember a
-                  photograph from {siteConfig.association.collegeShort}.
+                  Photographs GECIANs still look at. Open a year album, or add
+                  one from {siteConfig.association.collegeShort}.
                 </p>
               </div>
               {verified ? (
@@ -82,11 +90,23 @@ export default async function Home({ searchParams }: HomeProps) {
               <section>
                 <h2 className="text-h3 font-medium tracking-wordmark">Year albums</h2>
                 <p className="mt-1 text-caption text-muted">
-                  Each cover is the most remembered print from that batch.
+                  {showAllAlbums
+                    ? "Every admission year, oldest first. Each cover is the most liked photograph from that batch."
+                    : "Oldest first. Each cover is the most liked photograph from that batch."}
                 </p>
                 <div className="mt-6">
-                  <YearAlbumGrid albums={albums} />
+                  <YearAlbumGrid
+                    albums={albums}
+                    moreHref={showAllAlbums ? undefined : "/?albums=all"}
+                  />
                 </div>
+                {showAllAlbums ? (
+                  <p className="mt-4">
+                    <Link href="/" className="text-caption text-muted hover:text-ink">
+                      Show fewer albums
+                    </Link>
+                  </p>
+                ) : null}
               </section>
             </div>
 
@@ -94,7 +114,7 @@ export default async function Home({ searchParams }: HomeProps) {
               <section className="mt-16">
                 <h2 className="text-h3 font-medium tracking-wordmark">Most remembered</h2>
                 <p className="mt-1 text-caption text-muted">
-                  Photographs with the most likes, then the newest prints.
+                  Photographs with the most likes, then the newest ones.
                 </p>
                 <div className="mt-6">
                   <PhotoWall photos={remembered} />

@@ -2,7 +2,13 @@ import Link from "next/link";
 import { albumHref, formatBatchLabel } from "@/config/site";
 import type { YearAlbum } from "@/lib/data";
 
-export function YearAlbumGrid({ albums }: { albums: YearAlbum[] }) {
+export function YearAlbumGrid({
+  albums,
+  moreHref,
+}: {
+  albums: YearAlbum[];
+  moreHref?: string;
+}) {
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
       {albums.map((album) => (
@@ -30,12 +36,21 @@ export function YearAlbumGrid({ albums }: { albums: YearAlbum[] }) {
             <p className="mt-1 text-caption text-paper/80">
               {formatBatchLabel(album.year)}
               {album.count > 0
-                ? ` · ${album.count} ${album.count === 1 ? "print" : "prints"}`
+                ? ` · ${album.count} ${album.count === 1 ? "photo" : "photos"}`
                 : ""}
             </p>
           </div>
         </Link>
       ))}
+      {moreHref ? (
+        <Link
+          href={moreHref}
+          className="flex aspect-[3/4] flex-col justify-end rounded-2xl bg-surface/70 p-3 ring-1 ring-ink/10 sm:p-4"
+        >
+          <p className="font-semibold tracking-wordmark text-h3">Explore more albums</p>
+          <p className="mt-2 text-caption text-muted">Every batch, oldest first.</p>
+        </Link>
+      ) : null}
     </div>
   );
 }

@@ -261,10 +261,18 @@ export type YearAlbum = {
   cover: PhotoCard | null;
 };
 
-export async function listYearAlbums(limit = 8): Promise<YearAlbum[]> {
-  const years = [...allBatchYears()].reverse();
+export async function listYearAlbums(limit?: number): Promise<YearAlbum[]> {
+  const years = allBatchYears();
+  const take = (chosen: number[]) =>
+    Promise.all(
+      [...chosen]
+        .sort((a, b) => a - b)
+        .map((year) => toAlbum(year)),
+    );
+
   if (!isSupabaseConfigured()) {
-    return years.slice(0, limit).map((year) => ({ year, count: 0, cover: null }));
+    const chosen = limit ? years.slice(-limit) : years;
+    return chosen.map((year) => ({ year, count: 0, cover: null }));
   }
 
   const supabase = await createServerSupabaseClient();
@@ -320,18 +328,23 @@ export async function listYearAlbums(limit = 8): Promise<YearAlbum[]> {
     return { year, count: list.length, cover };
   };
 
+  if (!limit) {
+    return take(years);
+  }
+
   const withPhotos = years.filter((year) => (byYear.get(year)?.length ?? 0) > 0);
+  const newestFirst = [...years].reverse();
   const chosen: number[] = [];
   for (const year of withPhotos) {
     if (chosen.length >= limit) break;
     chosen.push(year);
   }
-  for (const year of years) {
+  for (const year of newestFirst) {
     if (chosen.length >= limit) break;
     if (chosen.includes(year)) continue;
     chosen.push(year);
   }
-  return Promise.all(chosen.map(toAlbum));
+  return take(chosen);
 }
 
 export async function listRememberedPhotos(limit = 12): Promise<PhotoCard[]> {
