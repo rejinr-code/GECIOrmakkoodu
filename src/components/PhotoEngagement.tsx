@@ -75,9 +75,9 @@ export function PhotoEngagement({
       {comments.length === 0 ? (
         <p className="mt-4 text-muted">No comments yet.</p>
       ) : (
-        <ul className="mt-6 space-y-6">
+        <ul className="mt-6 space-y-3">
           {comments.map((comment) => (
-            <li key={comment.id} className="border-t border-ink/8 pt-4">
+            <li key={comment.id} className="rounded-2xl bg-surface/50 px-4 py-4 ring-1 ring-ink/8">
               <p className="whitespace-pre-wrap">{comment.body}</p>
               <p className="mt-2 text-caption text-muted">
                 <ContributorLink id={comment.profileId} name={comment.authorName} />

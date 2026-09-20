@@ -15,7 +15,7 @@ type Props = {
 
 export function SiteHeader({ session, prompt, consentStale, features }: Props) {
   const links = [
-    { href: "/", label: "Archive" },
+    { href: "/", label: "Albums" },
     { href: "/articles", label: "Letters" },
     ...(features?.directory ? [{ href: "/people", label: "People" }] : []),
     ...(features?.mentoring ? [{ href: "/offers", label: "Offers" }] : []),
@@ -23,7 +23,7 @@ export function SiteHeader({ session, prompt, consentStale, features }: Props) {
     { href: "/about", label: "About" },
   ];
   return (
-    <header className="sticky top-0 z-40 border-b border-ink/8 bg-paper">
+    <header className="sticky top-0 z-40 border-b border-ink/8 bg-paper/80 backdrop-blur-md">
       <div className="flex items-center justify-between gap-4 px-4 py-2.5 sm:px-6 lg:px-8">
         <BrandLockup />
 
@@ -33,13 +33,13 @@ export function SiteHeader({ session, prompt, consentStale, features }: Props) {
               <Link
                 key={link.href}
                 href={link.href}
-                className="inline-flex min-h-11 items-center px-3 hover:text-ink"
+                className="inline-flex min-h-11 items-center rounded-full px-3 hover:bg-ink/5 hover:text-ink"
               >
                 {link.label}
               </Link>
             ))}
             {isStaff(session.profile) ? (
-              <Link href="/admin" className="inline-flex min-h-11 items-center px-3 hover:text-ink">
+              <Link href="/admin" className="inline-flex min-h-11 items-center rounded-full px-3 hover:bg-ink/5 hover:text-ink">
                 Admin
               </Link>
             ) : null}
@@ -50,12 +50,12 @@ export function SiteHeader({ session, prompt, consentStale, features }: Props) {
               {isVerified(session.profile) ? (
                 <Link
                   href="/contribute"
-                  className="inline-flex min-h-11 items-center px-3 text-caption text-ink"
+                  className="inline-flex min-h-11 items-center rounded-full px-3 text-caption text-ink hover:bg-ink/5"
                 >
                   Add a photograph
                 </Link>
               ) : null}
-              <Link href="/account" className="inline-flex min-h-11 items-center px-3 text-caption text-ink">
+              <Link href="/account" className="inline-flex min-h-11 items-center rounded-full px-3 text-caption text-ink hover:bg-ink/5">
                 {session.profile?.name?.split(" ")[0] || "Account"}
               </Link>
               <form action={signOut}>
@@ -77,7 +77,7 @@ export function SiteHeader({ session, prompt, consentStale, features }: Props) {
           <Link
             key={link.href}
             href={link.href}
-            className="inline-flex min-h-11 shrink-0 items-center px-3 text-caption"
+            className="inline-flex min-h-11 shrink-0 items-center rounded-full px-3 text-caption"
           >
             {link.label}
           </Link>

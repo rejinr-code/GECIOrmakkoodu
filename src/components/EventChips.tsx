@@ -17,10 +17,12 @@ export function EventChips({
   if (tags.length === 0) return null;
 
   return (
-    <nav aria-label="Events" className="mt-4 flex flex-wrap gap-x-4 gap-y-1 text-caption">
+    <nav aria-label="Events" className="mt-4 flex flex-wrap gap-1">
       <Link
         href={albumHref({ year, branch, view: timeline ? "timeline" : undefined })}
-        className={event ? "text-muted" : "text-gold"}
+        className={`inline-flex min-h-9 items-center rounded-full px-3 text-caption ${
+          event ? "text-muted hover:bg-ink/5" : "bg-ink/5 text-ink"
+        }`}
         aria-current={event ? undefined : "page"}
       >
         All events
@@ -36,7 +38,9 @@ export function EventChips({
               event: tag.slug,
               view: timeline ? "timeline" : undefined,
             })}
-            className={active ? "text-gold" : "text-muted"}
+            className={`inline-flex min-h-9 items-center rounded-full px-3 text-caption ${
+              active ? "bg-ink/5 text-ink" : "text-muted hover:bg-ink/5"
+            }`}
             aria-current={active ? "page" : undefined}
           >
             {tag.label}

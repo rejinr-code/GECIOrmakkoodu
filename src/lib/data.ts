@@ -1,4 +1,4 @@
-import { siteConfig, type OfferKind } from "@/config/site";
+import { allBatchYears, siteConfig, type OfferKind } from "@/config/site";
 import { publicEnv, isSupabaseConfigured } from "@/lib/env";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { imageStore } from "@/lib/imageStore.server";
@@ -20,6 +20,7 @@ export type PhotoCard = {
   contributorName: string;
   contributorId: string | null;
   anonymised: boolean;
+  likeCount: number;
 };
 
 export type ArticleCard = {
@@ -216,10 +217,187 @@ export async function listApprovedPhotos(options: {
           ? null
           : row.uploader_id,
       anonymised: row.anonymised,
+      likeCount: 0,
     });
   }
 
-  return { photos, total: count ?? 0 };
+  return { photos: await withLikeCounts(photos), total: count ?? 0 };
+}
+
+async function withLikeCounts(photos: PhotoCard[]): Promise<PhotoCard[]> {
+  if (photos.length === 0 || !isSupabaseConfigured()) return photos;
+  const counts = await reactionCounts(
+    "photo",
+    photos.map((photo) => photo.id),
+  );
+  return photos.map((photo) => ({
+    ...photo,
+    likeCount: counts.get(photo.id) ?? 0,
+  }));
+}
+
+async function reactionCounts(
+  parentType: "photo" | "article",
+  ids: string[],
+): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (ids.length === 0 || !isSupabaseConfigured()) return counts;
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("reactions")
+    .select("parent_id")
+    .eq("parent_type", parentType)
+    .in("parent_id", ids)
+    .is("deleted_at", null);
+  for (const row of data ?? []) {
+    counts.set(row.parent_id, (counts.get(row.parent_id) ?? 0) + 1);
+  }
+  return counts;
+}
+
+export type YearAlbum = {
+  year: number;
+  count: number;
+  cover: PhotoCard | null;
+};
+
+export async function listYearAlbums(limit = 8): Promise<YearAlbum[]> {
+  const years = [...allBatchYears()].reverse();
+  if (!isSupabaseConfigured()) {
+    return years.slice(0, limit).map((year) => ({ year, count: 0, cover: null }));
+  }
+
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("photos")
+    .select("id, caption, alt_text, batch_year, branch, width, height, thumb_key, uploader_id, anonymised")
+    .eq("status", "approved")
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(800);
+
+  const rows = data ?? [];
+  const counts = await reactionCounts(
+    "photo",
+    rows.map((row) => row.id),
+  );
+  const byYear = new Map<number, typeof rows>();
+  for (const row of rows) {
+    const list = byYear.get(row.batch_year) ?? [];
+    list.push(row);
+    byYear.set(row.batch_year, list);
+  }
+
+  const toAlbum = async (year: number): Promise<YearAlbum> => {
+    const list = byYear.get(year) ?? [];
+    const ranked = [...list].sort(
+      (a, b) => (counts.get(b.id) ?? 0) - (counts.get(a.id) ?? 0),
+    );
+    const coverRow = ranked[0];
+    let cover: PhotoCard | null = null;
+    if (coverRow) {
+      let thumbUrl: string | null = null;
+      try {
+        thumbUrl = await imageStore.getUrl(coverRow.thumb_key, "thumb");
+      } catch {
+        thumbUrl = null;
+      }
+      cover = {
+        id: coverRow.id,
+        caption: coverRow.caption,
+        altText: coverRow.alt_text,
+        batchYear: coverRow.batch_year,
+        branch: coverRow.branch,
+        width: coverRow.width,
+        height: coverRow.height,
+        thumbUrl,
+        contributorName: "GECIAN",
+        contributorId: null,
+        anonymised: coverRow.anonymised,
+        likeCount: counts.get(coverRow.id) ?? 0,
+      };
+    }
+    return { year, count: list.length, cover };
+  };
+
+  const withPhotos = years.filter((year) => (byYear.get(year)?.length ?? 0) > 0);
+  const chosen: number[] = [];
+  for (const year of withPhotos) {
+    if (chosen.length >= limit) break;
+    chosen.push(year);
+  }
+  for (const year of years) {
+    if (chosen.length >= limit) break;
+    if (chosen.includes(year)) continue;
+    chosen.push(year);
+  }
+  return Promise.all(chosen.map(toAlbum));
+}
+
+export async function listRememberedPhotos(limit = 12): Promise<PhotoCard[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createServerSupabaseClient();
+  const { data: reactions } = await supabase
+    .from("reactions")
+    .select("parent_id")
+    .eq("parent_type", "photo")
+    .is("deleted_at", null)
+    .limit(3000);
+
+  const counts = new Map<string, number>();
+  for (const row of reactions ?? []) {
+    counts.set(row.parent_id, (counts.get(row.parent_id) ?? 0) + 1);
+  }
+  const rankedIds = [...counts.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([id]) => id)
+    .slice(0, limit * 2);
+
+  const remembered: PhotoCard[] = [];
+  if (rankedIds.length > 0) {
+    const { data } = await supabase
+      .from("photos")
+      .select("id, caption, alt_text, batch_year, branch, width, height, thumb_key, uploader_id, anonymised")
+      .eq("status", "approved")
+      .is("deleted_at", null)
+      .in("id", rankedIds);
+    const byId = new Map((data ?? []).map((row) => [row.id, row]));
+    for (const id of rankedIds) {
+      const row = byId.get(id);
+      if (!row || remembered.length >= limit) continue;
+      let thumbUrl: string | null = null;
+      try {
+        thumbUrl = await imageStore.getUrl(row.thumb_key, "thumb");
+      } catch {
+        thumbUrl = null;
+      }
+      remembered.push({
+        id: row.id,
+        caption: row.caption,
+        altText: row.alt_text,
+        batchYear: row.batch_year,
+        branch: row.branch,
+        width: row.width,
+        height: row.height,
+        thumbUrl,
+        contributorName: row.anonymised ? "Former member" : "GECIAN",
+        contributorId: null,
+        anonymised: row.anonymised,
+        likeCount: counts.get(row.id) ?? 0,
+      });
+    }
+  }
+
+  if (remembered.length >= limit) return remembered.slice(0, limit);
+
+  const { photos } = await listApprovedPhotos({ page: 1 });
+  const seen = new Set(remembered.map((photo) => photo.id));
+  for (const photo of photos) {
+    if (seen.has(photo.id)) continue;
+    remembered.push(photo);
+    if (remembered.length >= limit) break;
+  }
+  return remembered;
 }
 
 export async function getPhoto(id: string) {
@@ -626,6 +804,7 @@ async function mapPhotoCards(
           ? null
           : row.uploader_id,
       anonymised: row.anonymised,
+      likeCount: 0,
       status: row.status,
       eventTag: row.event_tag,
       peopleTagged: row.people_tagged,

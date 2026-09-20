@@ -5,7 +5,6 @@ import { usePathname, useSearchParams } from "next/navigation";
 import {
   albumHref,
   allBatchYears,
-  defaultGalleryYear,
   formatBatchLabel,
   isBranchOffered,
   parseAdmissionYear,
@@ -17,14 +16,22 @@ export function GalleryYearNav() {
   const params = useSearchParams();
   const timeline = pathname === "/" && params.get("view") === "timeline";
   const fromQuery = parseAdmissionYear(params.get("year") ?? undefined);
-  const activeYear = timeline
-    ? 0
-    : pathname === "/"
-      ? (fromQuery ?? defaultGalleryYear())
-      : (fromQuery ?? 0);
-  const branch = pathname === "/" && !timeline ? parseBranch(params.get("branch") ?? undefined, activeYear) : null;
+  const collection = pathname === "/" && !fromQuery && !timeline;
+  const activeYear = timeline || collection ? 0 : (fromQuery ?? 0);
+  const branch =
+    pathname === "/" && !timeline && !collection && activeYear
+      ? parseBranch(params.get("branch") ?? undefined, activeYear)
+      : null;
   const event = params.get("event");
-  return <YearRail activeYear={activeYear} branch={branch} event={event} timeline={timeline} />;
+  return (
+    <YearRail
+      activeYear={activeYear}
+      branch={branch}
+      event={event}
+      timeline={timeline}
+      collection={collection}
+    />
+  );
 }
 
 export function YearRail({
@@ -32,11 +39,13 @@ export function YearRail({
   branch = null,
   event = null,
   timeline = false,
+  collection = false,
 }: {
   activeYear: number;
   branch?: string | null;
   event?: string | null;
   timeline?: boolean;
+  collection?: boolean;
 }) {
   const years = allBatchYears();
 
@@ -75,6 +84,19 @@ export function YearRail({
           aria-label="Batches"
           className="year-rail min-h-0 flex-1 overflow-y-auto pb-10"
         >
+          <a
+            href="/"
+            className={`flex min-h-12 items-center gap-3 px-5 font-semibold tracking-year ${
+              collection ? "text-[1.05rem] text-gold" : "text-caption text-muted hover:text-ink"
+            }`}
+            aria-current={collection ? "page" : undefined}
+          >
+            <span
+              className={`h-8 w-0.5 shrink-0 ${collection ? "bg-gold" : "bg-ink/10"}`}
+              aria-hidden
+            />
+            Albums
+          </a>
           <a
             href={albumHref({ view: "timeline", event })}
             className={`flex min-h-12 items-center gap-3 px-5 font-semibold tracking-year ${
@@ -116,6 +138,15 @@ export function YearRail({
 
       <div className="sticky top-[var(--header-h)] z-30 border-b border-ink/8 bg-paper lg:hidden">
         <nav aria-label="Batches" className="year-strip flex gap-1 overflow-x-auto px-2 py-1">
+          <a
+            href="/"
+            className={`inline-flex min-h-11 shrink-0 items-center border-b-2 px-3 text-caption font-semibold tracking-year ${
+              collection ? "border-gold text-gold" : "border-transparent text-muted"
+            }`}
+            aria-current={collection ? "page" : undefined}
+          >
+            Albums
+          </a>
           <a
             href={albumHref({ view: "timeline", event })}
             className={`inline-flex min-h-11 shrink-0 items-center border-b-2 px-3 text-caption font-semibold tracking-year ${

@@ -50,7 +50,7 @@ export default async function BatchesPage() {
                 {(byYear.get(year) ?? []).map((group) => {
                   const invite = invites.get(`${group.batch_year}-${group.branch}`);
                   return (
-                    <li key={`${group.batch_year}-${group.branch}`} className="print-mat px-5 py-5">
+                    <li key={`${group.batch_year}-${group.branch}`} className="rounded-2xl bg-surface/70 px-5 py-5 ring-1 ring-ink/8">
                       <p className="font-medium">{branchLabel(group.branch)}</p>
                       {group.coordinator_name ? (
                         <p className="mt-1 text-caption text-muted">{group.coordinator_name}</p>

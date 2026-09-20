@@ -21,8 +21,8 @@ export function EmptyYear({
   return (
     <div className="max-w-xl pt-2">
       <div className="album-spread mb-8 grid grid-cols-2 gap-3" aria-hidden>
-        <div className="print-mat h-48 sm:h-56" />
-        <div className="print-mat h-48 sm:h-56" />
+        <div className="h-48 rounded-2xl bg-surface ring-1 ring-ink/8 sm:h-56" />
+        <div className="h-48 rounded-2xl bg-surface ring-1 ring-ink/8 sm:h-56" />
       </div>
       <p className="text-lead text-ink">
         {eventLabel

@@ -63,7 +63,7 @@ export function PhotoLightbox({
           alt={alt}
           width={width}
           height={height}
-          className="print-mat max-h-[80dvh] w-full object-contain"
+          className="print-mat max-h-[80dvh] w-full rounded-2xl object-contain"
         />
       </button>
 

@@ -42,7 +42,7 @@ export default async function PersonPage({ params }: Props) {
   const place = [profile.current_city, profile.current_role].filter(Boolean).join(" · ");
 
   return (
-    <PaperPage>
+    <PaperPage wide>
       <h1 className="text-h1 font-medium tracking-wordmark">{profile.name}</h1>
       <p className="mt-3 text-caption text-muted">
         {profile.batch_year ? formatBatchLabel(profile.batch_year) : null}

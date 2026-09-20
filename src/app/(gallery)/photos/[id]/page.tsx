@@ -149,7 +149,7 @@ export default async function PhotoPage({ params, searchParams }: Props) {
             nextHref={neighbors.nextId ? photoHref(neighbors.nextId, hrefOptions) : null}
           />
         ) : (
-          <div className="print-mat flex min-h-64 items-end p-6 text-muted">
+          <div className="print-mat flex min-h-64 items-end rounded-2xl p-6 text-muted">
             {photo.alt_text}
           </div>
         )}

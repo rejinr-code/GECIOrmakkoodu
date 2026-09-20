@@ -25,7 +25,7 @@ export default async function OffersPage({ searchParams }: Props) {
   const canPost = isVerified(session.profile);
 
   return (
-    <PaperPage>
+    <PaperPage wide>
       <h1 className="text-h1 font-medium tracking-wordmark">Offers</h1>
       <p className="mt-4 max-w-prose text-muted">
         Mentoring and internships from GECIANs. A volunteer reads each offer
@@ -40,24 +40,30 @@ export default async function OffersPage({ searchParams }: Props) {
         </p>
       ) : null}
 
-      <nav className="mt-10 flex flex-wrap gap-4 text-caption" aria-label="Offer kind">
+      <nav className="mt-10 flex flex-wrap gap-1" aria-label="Offer kind">
         <Link
           href={offersHref({})}
-          className={!kind ? "text-ink" : "text-muted"}
+          className={`inline-flex min-h-9 items-center rounded-full px-3 text-caption ${
+            !kind ? "bg-ink/5 text-ink" : "text-muted hover:bg-ink/5"
+          }`}
           aria-current={!kind ? "page" : undefined}
         >
           All
         </Link>
         <Link
           href={offersHref({ kind: "mentoring" })}
-          className={kind === "mentoring" ? "text-ink" : "text-muted"}
+          className={`inline-flex min-h-9 items-center rounded-full px-3 text-caption ${
+            kind === "mentoring" ? "bg-ink/5 text-ink" : "text-muted hover:bg-ink/5"
+          }`}
           aria-current={kind === "mentoring" ? "page" : undefined}
         >
           Mentoring
         </Link>
         <Link
           href={offersHref({ kind: "internship" })}
-          className={kind === "internship" ? "text-ink" : "text-muted"}
+          className={`inline-flex min-h-9 items-center rounded-full px-3 text-caption ${
+            kind === "internship" ? "bg-ink/5 text-ink" : "text-muted hover:bg-ink/5"
+          }`}
           aria-current={kind === "internship" ? "page" : undefined}
         >
           Internships
@@ -71,9 +77,9 @@ export default async function OffersPage({ searchParams }: Props) {
             : "Nothing on the board yet."}
         </p>
       ) : (
-        <ul className="mt-12 space-y-8">
+        <ul className="mt-12 grid gap-3">
           {offers.map((offer) => (
-            <li key={offer.id} className="border-t border-ink/8 pt-6">
+            <li key={offer.id} className="rounded-2xl bg-surface/60 px-5 py-5 ring-1 ring-ink/8">
               <p className="text-caption uppercase tracking-wide text-muted">
                 {offer.kind === "internship" ? "Internship" : "Mentoring"}
               </p>

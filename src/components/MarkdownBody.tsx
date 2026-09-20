@@ -40,10 +40,14 @@ export function MarkdownBody({ children }: { children: string }) {
   );
 }
 
-export function PaperPage({ children }: { children: ReactNode }) {
+export function PaperPage({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return (
     <main className="min-h-[calc(100dvh-4.5rem)] bg-paper text-paper-ink">
-      <article className="mx-auto max-w-[38rem] px-6 py-16 sm:px-8 lg:py-20">{children}</article>
+      <article
+        className={`mx-auto px-6 py-16 sm:px-8 lg:py-20 ${wide ? "max-w-4xl" : "max-w-[40rem]"}`}
+      >
+        {children}
+      </article>
     </main>
   );
 }

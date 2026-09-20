@@ -45,8 +45,8 @@ export function LikeButton({
       <input type="hidden" name="next" value={next} />
       <button
         type="submit"
-        className={`inline-flex min-h-11 items-center font-medium ${
-          liked ? "text-gold" : "text-ink"
+        className={`btn ${
+          liked ? "bg-gold/15 text-gold" : "btn-quiet text-ink"
         }`}
         aria-pressed={liked}
       >

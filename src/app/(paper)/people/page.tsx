@@ -40,7 +40,7 @@ export default async function DirectoryPage({ searchParams }: Props) {
   const hrefOptions = { q: q || undefined, year, branch };
 
   return (
-    <PaperPage>
+    <PaperPage wide>
       <h1 className="text-h1 font-medium tracking-wordmark">People</h1>
       <p className="mt-4 max-w-prose text-muted">
         Alumni who chose to be listed. Phone and email stay off this page. Each
@@ -95,11 +95,11 @@ export default async function DirectoryPage({ searchParams }: Props) {
             : "The directory is empty. Verified alumni can opt in from their account."}
         </p>
       ) : (
-        <ul className="mt-12 space-y-8">
+        <ul className="mt-12 grid gap-3 sm:grid-cols-2">
           {people.map((person) => {
             const place = [person.city, person.role].filter(Boolean).join(" · ");
             return (
-              <li key={person.id} className="border-t border-ink/8 pt-6">
+              <li key={person.id} className="rounded-2xl bg-surface/60 px-5 py-5 ring-1 ring-ink/8">
                 <Link href={`/people/${person.id}`} className="text-lead font-medium">
                   {person.name}
                 </Link>

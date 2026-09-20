@@ -13,7 +13,7 @@ export default async function ArticlesPage() {
   const canWrite = isVerified(session.profile) && settings?.feature_articles !== false;
 
   return (
-    <PaperPage>
+    <PaperPage wide>
       <h1 className="text-h1 font-medium tracking-wordmark">Letters</h1>
       <p className="mt-4 max-w-md">
         Writing from campus years, on paper instead of the photograph wall.
@@ -32,15 +32,18 @@ export default async function ArticlesPage() {
             : "No letters have been published yet."}
         </p>
       ) : (
-        <ul className="mt-10 space-y-6">
+        <ul className="mt-10 grid gap-3">
           {articles.map((article) => (
             <li key={article.id}>
-              <Link href={`/articles/${article.slug}`} className="text-h3 font-medium">
-                {article.title}
+              <Link
+                href={`/articles/${article.slug}`}
+                className="block rounded-2xl bg-surface/60 px-5 py-5 ring-1 ring-ink/8 hover:bg-surface"
+              >
+                <span className="text-h3 font-medium">{article.title}</span>
+                {article.batchYear ? (
+                  <p className="mt-2 text-caption opacity-70">{formatBatchLabel(article.batchYear)}</p>
+                ) : null}
               </Link>
-              {article.batchYear ? (
-                <p className="text-caption opacity-70">{formatBatchLabel(article.batchYear)}</p>
-              ) : null}
             </li>
           ))}
         </ul>

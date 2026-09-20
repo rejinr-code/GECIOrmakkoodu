@@ -20,8 +20,8 @@ export function AlbumTabs({
     <nav aria-label="Branches" className="mt-7 flex gap-1 overflow-x-auto">
       <Link
         href={albumHref({ year, event })}
-        className={`inline-flex min-h-11 shrink-0 items-center border-b-2 px-3 text-caption font-medium ${
-          branch ? "border-transparent text-muted" : "border-gold text-gold"
+        className={`inline-flex min-h-11 shrink-0 items-center rounded-full px-4 text-caption font-medium ${
+          branch ? "text-muted hover:bg-ink/5" : "bg-gold/15 text-gold"
         }`}
         aria-current={branch ? undefined : "page"}
       >
@@ -35,8 +35,8 @@ export function AlbumTabs({
             href={albumHref({ year, branch: item.id, event })}
             title={item.label}
             aria-label={item.label}
-            className={`inline-flex min-h-11 shrink-0 items-center border-b-2 px-3 text-caption font-medium ${
-              active ? "border-gold text-gold" : "border-transparent text-muted"
+            className={`inline-flex min-h-11 shrink-0 items-center rounded-full px-4 text-caption font-medium ${
+              active ? "bg-gold/15 text-gold" : "text-muted hover:bg-ink/5"
             }`}
             aria-current={active ? "page" : undefined}
           >

@@ -6,7 +6,7 @@ import "./globals.css";
 
 const poppins = Poppins({
   subsets: ["latin"],
-  weight: ["300", "500", "600"],
+  weight: ["300", "400", "500", "600"],
   variable: "--font-poppins",
   display: "swap",
 });
@@ -33,7 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="en"
       className={`${poppins.variable} ${manjari.variable} h-full antialiased`}
     >
-      <body className="min-h-full bg-paper font-sans font-light text-ink">
+      <body className="min-h-full bg-paper font-sans text-ink">
         {children as ReactNode}
       </body>
     </html>
