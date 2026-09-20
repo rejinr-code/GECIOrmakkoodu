@@ -31,7 +31,11 @@ export function AuthForm({
   const [busy, setBusy] = useState(false);
 
   const branches = branchesForYear(batchYear);
-  const origin = publicEnv.siteUrl || (typeof window !== "undefined" ? window.location.origin : "");
+  const origin =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : publicEnv.siteUrl.replace(/\/$/, "");
+  const afterAuth = mode === "join" ? "/join" : "/";
 
   async function sendMagicLink(event: FormEvent) {
     event.preventDefault();
@@ -49,7 +53,7 @@ export function AuthForm({
         email,
         options: {
           shouldCreateUser: mode === "join",
-          emailRedirectTo: `${origin}/auth/callback`,
+          emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(afterAuth)}`,
           data:
             mode === "join"
               ? {
@@ -94,7 +98,7 @@ export function AuthForm({
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${origin}/auth/callback?next=/join`,
+          redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(afterAuth)}`,
         },
       });
       if (error) setMessage(error.message);

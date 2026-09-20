@@ -3,6 +3,13 @@ import { createServerClient } from "@supabase/ssr";
 import { isSupabaseConfigured, publicEnv } from "@/lib/env";
 
 export async function proxy(request: NextRequest) {
+  const authCode = request.nextUrl.searchParams.get("code");
+  if (authCode && request.nextUrl.pathname !== "/auth/callback") {
+    const callback = request.nextUrl.clone();
+    callback.pathname = "/auth/callback";
+    return NextResponse.redirect(callback);
+  }
+
   if (!isSupabaseConfigured()) {
     return NextResponse.next();
   }
