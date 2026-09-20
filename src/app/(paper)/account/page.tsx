@@ -1,7 +1,8 @@
 import { AccountControls } from "@/components/AccountControls";
 import { PaperPage } from "@/components/MarkdownBody";
+import { PublicProfileForm } from "@/components/PublicProfileForm";
 import { branchLabel, formatBatchLabel } from "@/config/site";
-import { listMyPhotos } from "@/lib/data";
+import { listMyArticles, listMyPhotos } from "@/lib/data";
 import { getSession, isVerified } from "@/lib/session";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -14,6 +15,7 @@ export default async function AccountPage() {
 
   const profile = session.profile;
   const mine = session.userId ? await listMyPhotos(session.userId) : [];
+  const letters = session.userId ? await listMyArticles(session.userId) : [];
 
   return (
     <PaperPage>
@@ -41,11 +43,31 @@ export default async function AccountPage() {
         </div>
       </dl>
       {isVerified(profile) ? (
-        <p className="mt-8">
-          <Link href="/contribute" className="btn btn-green">
-            Add a photograph
-          </Link>
-        </p>
+        <>
+          <p className="mt-8 flex flex-wrap gap-3">
+            <Link href="/contribute" className="btn btn-green">
+              Add a photograph
+            </Link>
+            <Link href="/write" className="btn btn-quiet">
+              Write a letter
+            </Link>
+            <Link href={`/people/${session.userId}`} className="btn btn-quiet">
+              Public page
+            </Link>
+          </p>
+          <section className="mt-12">
+            <h2 className="text-h3 font-medium tracking-wordmark">Public details</h2>
+            <p className="mt-3 text-caption text-muted">
+              Guests can open this page. Phone and email stay off it.
+            </p>
+            <PublicProfileForm
+              defaultName={profile?.name ?? ""}
+              defaultBio={profile?.bio ?? ""}
+              defaultCity={profile?.current_city ?? ""}
+              defaultRole={profile?.current_role ?? ""}
+            />
+          </section>
+        </>
       ) : null}
       {mine.length > 0 ? (
         <section className="mt-12">
@@ -62,6 +84,31 @@ export default async function AccountPage() {
                 </span>
                 {photo.status === "rejected" && photo.rejectionReason ? (
                   <span className="block text-muted">{photo.rejectionReason}</span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+      {letters.length > 0 ? (
+        <section className="mt-12">
+          <h2 className="text-h3 font-medium tracking-wordmark">Your letters</h2>
+          <ul className="mt-4 space-y-3">
+            {letters.map((article) => (
+              <li key={article.id} className="text-caption">
+                <Link
+                  href={
+                    article.status === "draft" || article.status === "pending"
+                      ? `/write/${article.id}`
+                      : `/articles/${article.slug}`
+                  }
+                  className="text-ink underline-offset-4 hover:underline"
+                >
+                  {article.title}
+                </Link>
+                <span className="text-muted"> · {article.status}</span>
+                {article.status === "rejected" && article.rejectionReason ? (
+                  <span className="block text-muted">{article.rejectionReason}</span>
                 ) : null}
               </li>
             ))}

@@ -194,3 +194,30 @@ export async function moderatePhoto(formData: FormData): Promise<void> {
   revalidatePath("/");
   revalidatePath("/account");
 }
+
+export async function moderateArticle(formData: FormData): Promise<void> {
+  const { supabase } = await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  const decision = String(formData.get("decision") ?? "");
+  const slug = String(formData.get("slug") ?? "");
+  const reason = String(formData.get("rejection_reason") ?? "").trim();
+  if (!id) throw new Error("Missing letter.");
+  if (decision !== "published" && decision !== "rejected") {
+    throw new Error("Choose publish or reject.");
+  }
+
+  const { error } = await supabase
+    .from("articles")
+    .update({
+      status: decision,
+      rejection_reason: decision === "rejected" ? reason || "Not suitable for the archive." : null,
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/letters");
+  if (slug) revalidatePath(`/articles/${slug}`);
+  revalidatePath("/articles");
+  revalidatePath("/");
+  revalidatePath("/account");
+}

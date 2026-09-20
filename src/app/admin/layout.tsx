@@ -22,6 +22,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           <Link href="/admin/photos" className="inline-flex min-h-11 items-center">
             Photographs
           </Link>
+          <Link href="/admin/letters" className="inline-flex min-h-11 items-center">
+            Letters
+          </Link>
           <Link href="/admin/reports" className="inline-flex min-h-11 items-center">
             Flags
           </Link>

@@ -3,9 +3,10 @@
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { getSession } from "@/lib/session";
+import { getSession, isVerified } from "@/lib/session";
 import { isBranchOffered } from "@/config/site";
 import { isSupabaseConfigured } from "@/lib/env";
+import { BIO_MAX, CITY_MAX, NAME_MAX, ROLE_MAX } from "@/lib/profiles";
 
 export async function signOut() {
   if (!isSupabaseConfigured()) redirect("/");
@@ -59,6 +60,57 @@ export async function saveProfile(formData: FormData) {
   }
 
   redirect("/");
+}
+
+export type PublicDetailsResult = { error: string } | { id: string };
+
+export async function savePublicDetails(formData: FormData): Promise<PublicDetailsResult> {
+  if (!isSupabaseConfigured()) {
+    return { error: "The archive is not connected to a database yet." };
+  }
+
+  const session = await getSession();
+  if (!session.userId) {
+    return { error: "Sign in first." };
+  }
+  if (!isVerified(session.profile)) {
+    return { error: "A volunteer has to verify you before this page is public." };
+  }
+
+  const name = String(formData.get("name") ?? "").trim();
+  const bio = String(formData.get("bio") ?? "").trim();
+  const city = String(formData.get("current_city") ?? "").trim();
+  const role = String(formData.get("current_role") ?? "").trim();
+
+  if (!name || name.length > NAME_MAX) {
+    return { error: "Please give your name." };
+  }
+  if (bio.length > BIO_MAX) {
+    return { error: "That note is a little long." };
+  }
+  if (city.length > CITY_MAX) {
+    return { error: "City names need to stay short." };
+  }
+  if (role.length > ROLE_MAX) {
+    return { error: "Keep the role to a short line." };
+  }
+
+  const supabase = await createServerSupabaseClient();
+  const { error } = await supabase
+    .from("profiles")
+    .update({
+      name,
+      bio: bio || null,
+      current_city: city || null,
+      current_role: role || null,
+    })
+    .eq("id", session.userId);
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { id: session.userId };
 }
 
 export async function exportMyData() {

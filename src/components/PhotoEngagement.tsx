@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CommentComposer } from "@/components/CommentComposer";
+import { ContributorLink } from "@/components/ContributorLink";
 import { FlagCommentForm } from "@/components/FlagCommentForm";
 import { LikeButton } from "@/components/LikeButton";
 import { removeFlaggedComment } from "@/lib/actions/admin";
@@ -72,7 +73,7 @@ export function PhotoEngagement({
             <li key={comment.id} className="border-t border-ink/8 pt-4">
               <p className="whitespace-pre-wrap">{comment.body}</p>
               <p className="mt-2 text-caption text-muted">
-                {comment.authorName}
+                <ContributorLink id={comment.profileId} name={comment.authorName} />
                 <span className="mx-2" aria-hidden>
                   ·
                 </span>

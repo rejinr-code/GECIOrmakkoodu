@@ -3,19 +3,20 @@ import { notFound } from "next/navigation";
 import { PhotoEngagement } from "@/components/PhotoEngagement";
 import { siteConfig } from "@/config/site";
 import { formatBatchLabel } from "@/config/site";
+import { ContributorLink } from "@/components/ContributorLink";
 import {
   contactEmail,
   getPhoto,
   getPhotoReactionState,
+  getPublicProfile,
   getSettings,
   listMyOpenCommentFlags,
   listPhotoComments,
 } from "@/lib/data";
 import { imageStore } from "@/lib/imageStore.server";
 import { removalMailto } from "@/lib/mailto";
-import { isSupabaseConfigured, publicEnv } from "@/lib/env";
+import { publicEnv } from "@/lib/env";
 import { getSession, isStaff } from "@/lib/session";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -86,16 +87,14 @@ export default async function PhotoPage({ params }: Props) {
     imageUrl = null;
   }
 
-  let contributor = "Former member";
-  if (!photo.anonymised && photo.uploader_id && isSupabaseConfigured()) {
-    const supabase = await createServerSupabaseClient();
-    const { data } = await supabase
-      .from("public_profiles")
-      .select("name")
-      .eq("id", photo.uploader_id)
-      .maybeSingle();
-    if (data?.name) contributor = data.name;
-  }
+  const contributorProfile =
+    !photo.anonymised && photo.uploader_id
+      ? await getPublicProfile(photo.uploader_id)
+      : null;
+  const contributorName = photo.anonymised
+    ? "Former member"
+    : (contributorProfile?.name ?? (photo.uploader_id ? "GECIAN" : "Former member"));
+  const contributorId = contributorProfile?.id ?? null;
 
   return (
     <main className="px-4 py-10 sm:px-8">
@@ -129,7 +128,9 @@ export default async function PhotoPage({ params }: Props) {
             {formatBatchLabel(photo.batch_year)}
             {photo.branch ? ` ${photo.branch}` : ""}
           </p>
-          <p className="text-caption text-muted">{contributor}</p>
+          <p className="text-caption text-muted">
+            <ContributorLink id={contributorId} name={contributorName} />
+          </p>
           <p className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-caption">
             {isPublic ? (
               <a href={itemUrl} className="inline-flex min-h-11 items-center">

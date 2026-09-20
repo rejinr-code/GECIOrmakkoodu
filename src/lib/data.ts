@@ -16,6 +16,7 @@ export type PhotoCard = {
   height: number;
   thumbUrl: string | null;
   contributorName: string;
+  contributorId: string | null;
   anonymised: boolean;
 };
 
@@ -38,6 +39,17 @@ export async function getSettings(): Promise<SettingsRow | null> {
 
 export function contactEmail(settings: SettingsRow | null): string {
   return settings?.contact_email || publicEnv.contactEmail || siteConfig.contact.email;
+}
+
+export async function getPublicProfile(id: string) {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("public_profiles")
+    .select("id, name, batch_year, branch, bio, current_city, current_role")
+    .eq("id", id)
+    .maybeSingle();
+  return data;
 }
 
 export async function getLegalDocument(slug: string) {
@@ -64,6 +76,7 @@ export async function listLegalDocuments() {
 export async function listApprovedPhotos(options: {
   batchYear?: number;
   branch?: string | null;
+  uploaderId?: string;
   page: number;
 }): Promise<{ photos: PhotoCard[]; total: number }> {
   if (!isSupabaseConfigured()) return { photos: [], total: 0 };
@@ -88,6 +101,9 @@ export async function listApprovedPhotos(options: {
   }
   if (options.branch) {
     query = query.eq("branch", options.branch);
+  }
+  if (options.uploaderId) {
+    query = query.eq("uploader_id", options.uploaderId).eq("anonymised", false);
   }
 
   const { data, count } = await query;
@@ -133,6 +149,10 @@ export async function listApprovedPhotos(options: {
       contributorName: row.anonymised || !row.uploader_id
         ? "Former member"
         : (names.get(row.uploader_id) ?? "GECIAN"),
+      contributorId:
+        row.anonymised || !row.uploader_id || !names.has(row.uploader_id)
+          ? null
+          : row.uploader_id,
       anonymised: row.anonymised,
     });
   }
@@ -151,16 +171,23 @@ export async function getPhoto(id: string) {
   return data;
 }
 
-export async function listPublishedArticles(limit = 6): Promise<ArticleCard[]> {
+export async function listPublishedArticles(
+  limit = 6,
+  options?: { authorId?: string },
+): Promise<ArticleCard[]> {
   if (!isSupabaseConfigured()) return [];
   const supabase = await createServerSupabaseClient();
-  const { data } = await supabase
+  let query = supabase
     .from("articles")
     .select("id, title, slug, batch_year, published_at")
     .eq("status", "published")
     .is("deleted_at", null)
     .order("published_at", { ascending: false })
     .limit(limit);
+  if (options?.authorId) {
+    query = query.eq("author_id", options.authorId).eq("anonymised", false);
+  }
+  const { data } = await query;
   return (data ?? []).map((row) => ({
     id: row.id,
     title: row.title,
@@ -179,6 +206,96 @@ export async function getArticle(slug: string) {
     .eq("slug", slug)
     .maybeSingle();
   return data;
+}
+
+export async function getArticleById(id: string) {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("articles")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+  return data;
+}
+
+export type ModeratedArticle = {
+  id: string;
+  title: string;
+  slug: string;
+  body: string;
+  batchYear: number | null;
+  status: Database["public"]["Tables"]["articles"]["Row"]["status"];
+  rejectionReason: string | null;
+  authorName: string;
+  createdAt: string;
+};
+
+async function mapArticles(
+  rows: Array<{
+    id: string;
+    title: string;
+    slug: string;
+    body: string;
+    batch_year: number | null;
+    status: Database["public"]["Tables"]["articles"]["Row"]["status"];
+    rejection_reason: string | null;
+    author_id: string | null;
+    created_at: string;
+  }>,
+  nameSource: "public" | "profiles",
+): Promise<ModeratedArticle[]> {
+  const ids = [
+    ...new Set(rows.map((row) => row.author_id).filter((id): id is string => Boolean(id))),
+  ];
+  const names = new Map<string, string>();
+  if (ids.length > 0) {
+    const supabase = await createServerSupabaseClient();
+    if (nameSource === "profiles") {
+      const { data } = await supabase.from("profiles").select("id, name").in("id", ids);
+      for (const profile of data ?? []) names.set(profile.id, profile.name);
+    } else {
+      const { data } = await supabase.from("public_profiles").select("id, name").in("id", ids);
+      for (const profile of data ?? []) names.set(profile.id, profile.name);
+    }
+  }
+
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    slug: row.slug,
+    body: row.body,
+    batchYear: row.batch_year,
+    status: row.status,
+    rejectionReason: row.rejection_reason,
+    authorName: row.author_id ? (names.get(row.author_id) ?? "GECIAN") : "Former member",
+    createdAt: row.created_at,
+  }));
+}
+
+export async function listPendingArticles(): Promise<ModeratedArticle[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("articles")
+    .select("id, title, slug, body, batch_year, status, rejection_reason, author_id, created_at")
+    .eq("status", "pending")
+    .is("deleted_at", null)
+    .order("created_at", { ascending: true });
+  return mapArticles(data ?? [], "profiles");
+}
+
+export async function listMyArticles(userId: string): Promise<ModeratedArticle[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("articles")
+    .select("id, title, slug, body, batch_year, status, rejection_reason, author_id, created_at")
+    .eq("author_id", userId)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(40);
+  return mapArticles(data ?? [], "public");
 }
 
 export async function listBatchGroups() {
@@ -303,6 +420,10 @@ async function mapPhotoCards(
         row.anonymised || !row.uploader_id
           ? "Former member"
           : (names.get(row.uploader_id) ?? "GECIAN"),
+      contributorId:
+        row.anonymised || !row.uploader_id || !names.has(row.uploader_id)
+          ? null
+          : row.uploader_id,
       anonymised: row.anonymised,
       status: row.status,
       eventTag: row.event_tag,
@@ -369,6 +490,7 @@ export type PhotoComment = {
   body: string;
   createdAt: string;
   authorId: string | null;
+  profileId: string | null;
   authorName: string;
 };
 
@@ -431,6 +553,10 @@ export async function listPhotoComments(photoId: string): Promise<PhotoComment[]
     body: row.body,
     createdAt: row.created_at,
     authorId: row.author_id,
+    profileId:
+      row.anonymised || !row.author_id || !names.has(row.author_id)
+        ? null
+        : row.author_id,
     authorName:
       row.anonymised || !row.author_id
         ? "Former member"
