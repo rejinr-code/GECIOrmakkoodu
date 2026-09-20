@@ -25,6 +25,14 @@ export function SiteFooter({
     >
       <div className="grid max-w-5xl gap-8 sm:grid-cols-2">
         <div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={siteConfig.logo.src}
+            alt={siteConfig.logo.alt}
+            width={48}
+            height={48}
+            className="mb-4 size-12 object-contain"
+          />
           <p className="text-ink/80">
             {siteConfig.name}
             <span lang="ml" className="font-malayalam">

@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Ormakkoodu">
-  <rect width="64" height="64" rx="14" fill="#1C1915"/>
-  <path d="M12 34c0-10 9-18 20-18s20 8 20 18-9 16-20 16-20-6-20-16z" fill="none" stroke="#C9A227" stroke-width="2.4"/>
-  <path d="M20 36c2-7 7-11 12-11s10 4 12 11" fill="none" stroke="#1E7A46" stroke-width="2.2" stroke-linecap="round"/>
-  <circle cx="32" cy="34" r="3" fill="#C9A227"/>
-</svg>

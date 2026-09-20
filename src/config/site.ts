@@ -28,8 +28,8 @@ export const siteConfig = {
       "Ormakkoodu is built and run by GECIAN alumni volunteers. Government Engineering College Idukki has no ownership, role, or responsibility for this archive.",
   },
   logo: {
-    src: "/branding/logo.svg",
-    alt: "Ormakkoodu",
+    src: "/branding/geci-idukki.png",
+    alt: "Government Engineering College Idukki",
   },
   colors: {
     ink: "#1C1915",
