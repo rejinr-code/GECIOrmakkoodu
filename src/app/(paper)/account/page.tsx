@@ -1,8 +1,10 @@
-import { redirect } from "next/navigation";
 import { AccountControls } from "@/components/AccountControls";
 import { PaperPage } from "@/components/MarkdownBody";
 import { branchLabel, formatBatchLabel } from "@/config/site";
-import { getSession } from "@/lib/session";
+import { listMyPhotos } from "@/lib/data";
+import { getSession, isVerified } from "@/lib/session";
+import Link from "next/link";
+import { redirect } from "next/navigation";
 
 export const metadata = { title: "Account" };
 
@@ -11,6 +13,7 @@ export default async function AccountPage() {
   if (!session.userId) redirect("/sign-in");
 
   const profile = session.profile;
+  const mine = session.userId ? await listMyPhotos(session.userId) : [];
 
   return (
     <PaperPage>
@@ -37,6 +40,34 @@ export default async function AccountPage() {
           <dd className="capitalize">{profile?.status}</dd>
         </div>
       </dl>
+      {isVerified(profile) ? (
+        <p className="mt-8">
+          <Link href="/contribute" className="btn btn-green">
+            Add a photograph
+          </Link>
+        </p>
+      ) : null}
+      {mine.length > 0 ? (
+        <section className="mt-12">
+          <h2 className="text-h3 font-medium tracking-wordmark">Your photographs</h2>
+          <ul className="mt-4 space-y-3">
+            {mine.map((photo) => (
+              <li key={photo.id} className="text-caption">
+                <Link href={`/photos/${photo.id}`} className="text-ink underline-offset-4 hover:underline">
+                  {photo.caption || photo.altText}
+                </Link>
+                <span className="text-muted">
+                  {" "}
+                  · {formatBatchLabel(photo.batchYear)} · {photo.status}
+                </span>
+                {photo.status === "rejected" && photo.rejectionReason ? (
+                  <span className="block text-muted">{photo.rejectionReason}</span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       <AccountControls />
     </PaperPage>
   );

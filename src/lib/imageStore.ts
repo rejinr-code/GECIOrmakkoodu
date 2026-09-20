@@ -44,6 +44,15 @@ export interface ImageStore {
 export const PHOTO_BUCKET = "photos";
 export const THUMB_BUCKET = "thumbs";
 
+/** Longest edge of the archived print. Compressed in the browser before upload. */
+export const FULL_MAX_EDGE = 2000;
+/** Longest edge of the wall thumbnail. */
+export const THUMB_MAX_EDGE = 400;
+export const WEBP_QUALITY = 0.8;
+export const FULL_MAX_BYTES = 5 * 1024 * 1024;
+export const THUMB_MAX_BYTES = 1024 * 1024;
+export const SOURCE_MAX_BYTES = 20 * 1024 * 1024;
+
 export function objectKey(
   ownerId: string,
   photoId: string,

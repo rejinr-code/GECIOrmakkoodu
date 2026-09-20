@@ -225,6 +225,145 @@ export async function listAlumniRegister() {
   return data ?? [];
 }
 
+export async function listEventTags() {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("event_tags")
+    .select("slug, label")
+    .order("sort_order", { ascending: true });
+  return data ?? [];
+}
+
+export type ModeratedPhotoCard = PhotoCard & {
+  status: Database["public"]["Tables"]["photos"]["Row"]["status"];
+  eventTag: string | null;
+  peopleTagged: string[];
+  rejectionReason: string | null;
+  createdAt: string;
+};
+
+async function mapPhotoCards(
+  rows: Array<{
+    id: string;
+    caption: string | null;
+    alt_text: string;
+    batch_year: number;
+    branch: string | null;
+    width: number;
+    height: number;
+    thumb_key: string;
+    uploader_id: string | null;
+    anonymised: boolean;
+    status: Database["public"]["Tables"]["photos"]["Row"]["status"];
+    event_tag: string | null;
+    people_tagged: string[];
+    rejection_reason: string | null;
+    created_at: string;
+  }>,
+  access?: { viewerId?: string; viewerIsModerator?: boolean },
+): Promise<ModeratedPhotoCard[]> {
+  const names = new Map<string, string>();
+  const uploaderIds = [
+    ...new Set(
+      rows
+        .filter((row) => !row.anonymised && row.uploader_id)
+        .map((row) => row.uploader_id as string),
+    ),
+  ];
+  if (uploaderIds.length > 0) {
+    const supabase = await createServerSupabaseClient();
+    const { data: profiles } = await supabase
+      .from("public_profiles")
+      .select("id, name")
+      .in("id", uploaderIds);
+    for (const profile of profiles ?? []) {
+      names.set(profile.id, profile.name);
+    }
+  }
+
+  const photos: ModeratedPhotoCard[] = [];
+  for (const row of rows) {
+    let thumbUrl: string | null = null;
+    try {
+      thumbUrl = await imageStore.getUrl(row.thumb_key, "thumb", 3600, access);
+    } catch {
+      thumbUrl = null;
+    }
+    photos.push({
+      id: row.id,
+      caption: row.caption,
+      altText: row.alt_text,
+      batchYear: row.batch_year,
+      branch: row.branch,
+      width: row.width,
+      height: row.height,
+      thumbUrl,
+      contributorName:
+        row.anonymised || !row.uploader_id
+          ? "Former member"
+          : (names.get(row.uploader_id) ?? "GECIAN"),
+      anonymised: row.anonymised,
+      status: row.status,
+      eventTag: row.event_tag,
+      peopleTagged: row.people_tagged,
+      rejectionReason: row.rejection_reason,
+      createdAt: row.created_at,
+    });
+  }
+  return photos;
+}
+
+export async function listPendingPhotos(): Promise<ModeratedPhotoCard[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("photos")
+    .select(
+      "id, caption, alt_text, batch_year, branch, width, height, thumb_key, uploader_id, anonymised, status, event_tag, people_tagged, rejection_reason, created_at",
+    )
+    .eq("status", "pending")
+    .is("deleted_at", null)
+    .order("created_at", { ascending: true });
+  return mapPhotoCards(data ?? [], { viewerIsModerator: true });
+}
+
+export async function listMyPhotos(userId: string): Promise<ModeratedPhotoCard[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("photos")
+    .select(
+      "id, caption, alt_text, batch_year, branch, width, height, thumb_key, uploader_id, anonymised, status, event_tag, people_tagged, rejection_reason, created_at",
+    )
+    .eq("uploader_id", userId)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(40);
+  return mapPhotoCards(data ?? [], { viewerId: userId });
+}
+
+export async function getStorageStats() {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = await createServerSupabaseClient();
+  const { data, error } = await supabase.rpc("admin_storage_stats");
+  if (error || !data || typeof data !== "object") return null;
+  const stats = data as {
+    photo_bytes?: number;
+    photo_count?: number;
+    pending_count?: number;
+    approved_count?: number;
+    free_tier_bytes?: number;
+  };
+  return {
+    photoBytes: Number(stats.photo_bytes ?? 0),
+    photoCount: Number(stats.photo_count ?? 0),
+    pendingCount: Number(stats.pending_count ?? 0),
+    approvedCount: Number(stats.approved_count ?? 0),
+    freeTierBytes: Number(stats.free_tier_bytes ?? 1073741824),
+  };
+}
+
 export type PhotoComment = {
   id: string;
   body: string;

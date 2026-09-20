@@ -169,3 +169,28 @@ export async function dismissCommentReport(formData: FormData): Promise<void> {
   if (error) throw new Error(error.message);
   revalidatePath("/admin/reports");
 }
+
+export async function moderatePhoto(formData: FormData): Promise<void> {
+  const { supabase } = await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  const decision = String(formData.get("decision") ?? "");
+  const reason = String(formData.get("rejection_reason") ?? "").trim();
+  if (!id) throw new Error("Missing photograph.");
+  if (decision !== "approved" && decision !== "rejected") {
+    throw new Error("Choose approve or reject.");
+  }
+
+  const { error } = await supabase
+    .from("photos")
+    .update({
+      status: decision,
+      rejection_reason: decision === "rejected" ? reason || "Not suitable for the archive." : null,
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/photos");
+  revalidatePath(`/photos/${id}`);
+  revalidatePath("/");
+  revalidatePath("/account");
+}

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { BrandLockup } from "@/components/BrandLockup";
 import { siteConfig } from "@/config/site";
 import type { SessionState } from "@/lib/session";
-import { isStaff } from "@/lib/session";
+import { isStaff, isVerified } from "@/lib/session";
 import { signOut } from "@/lib/actions/auth";
 
 type Props = {
@@ -42,6 +42,14 @@ export function SiteHeader({ session }: Props) {
 
           {session.userId ? (
             <div className="flex items-center gap-1">
+              {isVerified(session.profile) ? (
+                <Link
+                  href="/contribute"
+                  className="inline-flex min-h-11 items-center px-3 text-caption text-ink"
+                >
+                  Add a photograph
+                </Link>
+              ) : null}
               <Link href="/account" className="inline-flex min-h-11 items-center px-3 text-caption text-ink">
                 {session.profile?.name?.split(" ")[0] || "Account"}
               </Link>

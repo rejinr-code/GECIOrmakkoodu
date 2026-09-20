@@ -31,9 +31,12 @@ export function EmptyYear({
         volunteer checks new members against the alumni list.
       </p>
       {verified ? (
-        <p className="mt-6 text-caption text-muted">
-          Photograph upload opens in the next phase of this archive.
-        </p>
+        <Link
+          href={`/contribute?year=${year}${branch ? `&branch=${branch}` : ""}`}
+          className="btn btn-green mt-7"
+        >
+          Add a photograph
+        </Link>
       ) : session.userId ? (
         <p className="mt-6 text-caption text-muted">
           Once you are verified, this page is where your batch’s pictures will

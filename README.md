@@ -6,7 +6,7 @@ A photograph and writing archive run by **GECIAN**, the alumni association of Go
 
 This repository is meant to be handed from one volunteer to the next. You should be able to clone it, create your own Supabase project, run the migrations, and go live on Vercel without knowing the previous operator.
 
-Phase 1 is in progress: public wall, join/sign-in, legal pages, batch groups, and the admin verification queue. Photograph upload is Phase 2.
+Phase 1 is live: public wall, join/sign-in, legal pages, batch groups, likes and comments, and the admin verification queue. Photograph upload and the moderation queue are in this codebase.
 
 ## What you need
 
@@ -185,7 +185,7 @@ Supabase free tier: 500 MB database, **1 GB file storage**, 5 GB monthly egress.
 
 All bytes go through `src/lib/imageStore.ts`. Postgres stores only metadata and the storage key. To move to a dedicated image host later, replace `src/lib/imageStore.supabase.ts` and the re-export in `src/lib/imageStore.server.ts`. Do not talk to Storage from a component.
 
-The admin dashboard (Phase 2) will show `admin_storage_stats()` so the ceiling is visible before it arrives.
+The admin photographs page shows `admin_storage_stats()` so the ceiling is visible before it arrives.
 
 ## Authorisation model
 

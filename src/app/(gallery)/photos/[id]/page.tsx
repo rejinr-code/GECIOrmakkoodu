@@ -14,7 +14,7 @@ import {
 import { imageStore } from "@/lib/imageStore.server";
 import { removalMailto } from "@/lib/mailto";
 import { isSupabaseConfigured, publicEnv } from "@/lib/env";
-import { getSession } from "@/lib/session";
+import { getSession, isStaff } from "@/lib/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type Props = { params: Promise<{ id: string }> };
@@ -47,7 +47,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PhotoPage({ params }: Props) {
   const { id } = await params;
   const photo = await getPhoto(id);
-  if (!photo || photo.status !== "approved" || photo.deleted_at) {
+  const session = await getSession();
+  if (!photo || photo.deleted_at) {
+    notFound();
+  }
+
+  const staff = isStaff(session.profile);
+  const isOwner = Boolean(session.userId && photo.uploader_id === session.userId);
+  const isPublic = photo.status === "approved";
+  if (!isPublic && !isOwner && !staff) {
     notFound();
   }
 
@@ -55,8 +63,7 @@ export default async function PhotoPage({ params }: Props) {
   const email = contactEmail(settings);
   const siteUrl = publicEnv.siteUrl || "";
   const itemUrl = `${siteUrl}/photos/${photo.id}`;
-  const session = await getSession();
-  const commentsEnabled = settings?.feature_comments !== false;
+  const commentsEnabled = isPublic && settings?.feature_comments !== false;
   const comments = commentsEnabled ? await listPhotoComments(photo.id) : [];
   const reaction = commentsEnabled
     ? await getPhotoReactionState(photo.id, session.userId)
@@ -71,7 +78,10 @@ export default async function PhotoPage({ params }: Props) {
 
   let imageUrl: string | null = null;
   try {
-    imageUrl = await imageStore.getUrl(photo.storage_key, "full");
+    imageUrl = await imageStore.getUrl(photo.storage_key, "full", 3600, {
+      viewerId: session.userId ?? undefined,
+      viewerIsModerator: staff,
+    });
   } catch {
     imageUrl = null;
   }
@@ -105,6 +115,15 @@ export default async function PhotoPage({ params }: Props) {
           </div>
         )}
         <div className="mt-6 max-w-prose">
+          {!isPublic ? (
+            <p className="mb-4 text-caption text-gold">
+              {photo.status === "pending"
+                ? "Waiting for a volunteer to approve this print."
+                : photo.status === "rejected"
+                  ? `Not added to the album${photo.rejection_reason ? `: ${photo.rejection_reason}` : "."}`
+                  : "This print is not in the public album."}
+            </p>
+          ) : null}
           {photo.caption ? <p className="text-lead">{photo.caption}</p> : null}
           <p className="mt-3 font-semibold tracking-year text-gold">
             {formatBatchLabel(photo.batch_year)}
@@ -112,12 +131,11 @@ export default async function PhotoPage({ params }: Props) {
           </p>
           <p className="text-caption text-muted">{contributor}</p>
           <p className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-caption">
-            <a
-              href={itemUrl}
-              className="inline-flex min-h-11 items-center"
-            >
-              Shareable link
-            </a>
+            {isPublic ? (
+              <a href={itemUrl} className="inline-flex min-h-11 items-center">
+                Shareable link
+              </a>
+            ) : null}
             {email ? (
               <a
                 href={removalMailto({
