@@ -4,7 +4,8 @@ import { ContributorLink } from "@/components/ContributorLink";
 import { FlagCommentForm } from "@/components/FlagCommentForm";
 import { LikeButton } from "@/components/LikeButton";
 import { removeFlaggedComment } from "@/lib/actions/admin";
-import type { PhotoComment, PhotoReactionState } from "@/lib/data";
+import type { MemoryComment, ReactionState } from "@/lib/data";
+import type { MemoryParent } from "@/lib/engagement";
 import type { SessionState } from "@/lib/session";
 import { isStaff, isVerified } from "@/lib/session";
 
@@ -18,15 +19,19 @@ function formatNoteDate(value: string) {
 }
 
 export function PhotoEngagement({
-  photoId,
+  parentType,
+  parentId,
+  next,
   comments,
   reaction,
   flaggedIds,
   session,
 }: {
-  photoId: string;
-  comments: PhotoComment[];
-  reaction: PhotoReactionState;
+  parentType: MemoryParent;
+  parentId: string;
+  next: string;
+  comments: MemoryComment[];
+  reaction: ReactionState;
   flaggedIds: Set<string>;
   session: SessionState;
 }) {
@@ -36,7 +41,9 @@ export function PhotoEngagement({
   return (
     <section className="mt-10 max-w-prose border-t border-ink/8 pt-8">
       <LikeButton
-        photoId={photoId}
+        parentType={parentType}
+        parentId={parentId}
+        next={next}
         liked={reaction.liked}
         count={reaction.count}
         canLike={verified}
@@ -83,7 +90,12 @@ export function PhotoEngagement({
                 {session.userId &&
                 comment.authorId !== session.userId &&
                 !flaggedIds.has(comment.id) ? (
-                  <FlagCommentForm commentId={comment.id} photoId={photoId} />
+                  <FlagCommentForm
+                    commentId={comment.id}
+                    parentType={parentType}
+                    parentId={parentId}
+                    next={next}
+                  />
                 ) : null}
                 {flaggedIds.has(comment.id) ? (
                   <p className="text-caption text-muted">Flagged for review</p>
@@ -91,7 +103,6 @@ export function PhotoEngagement({
                 {staff ? (
                   <form action={removeFlaggedComment}>
                     <input type="hidden" name="comment_id" value={comment.id} />
-                    <input type="hidden" name="photo_id" value={photoId} />
                     <button
                       type="submit"
                       className="inline-flex min-h-11 items-center text-caption font-medium text-muted"
@@ -106,7 +117,9 @@ export function PhotoEngagement({
         </ul>
       )}
 
-      {verified ? <CommentComposer photoId={photoId} /> : null}
+      {verified ? (
+        <CommentComposer parentType={parentType} parentId={parentId} next={next} />
+      ) : null}
     </section>
   );
 }

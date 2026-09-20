@@ -7,11 +7,11 @@ import { ContributorLink } from "@/components/ContributorLink";
 import {
   contactEmail,
   getPhoto,
-  getPhotoReactionState,
+  getReactionState,
   getPublicProfile,
   getSettings,
   listMyOpenCommentFlags,
-  listPhotoComments,
+  listComments,
 } from "@/lib/data";
 import { imageStore } from "@/lib/imageStore.server";
 import { removalMailto } from "@/lib/mailto";
@@ -65,9 +65,9 @@ export default async function PhotoPage({ params }: Props) {
   const siteUrl = publicEnv.siteUrl || "";
   const itemUrl = `${siteUrl}/photos/${photo.id}`;
   const commentsEnabled = isPublic && settings?.feature_comments !== false;
-  const comments = commentsEnabled ? await listPhotoComments(photo.id) : [];
+  const comments = commentsEnabled ? await listComments("photo", photo.id) : [];
   const reaction = commentsEnabled
-    ? await getPhotoReactionState(photo.id, session.userId)
+    ? await getReactionState("photo", photo.id, session.userId)
     : { count: 0, liked: false };
   const flaggedIds =
     commentsEnabled && session.userId
@@ -153,7 +153,9 @@ export default async function PhotoPage({ params }: Props) {
           </p>
           {commentsEnabled ? (
             <PhotoEngagement
-              photoId={photo.id}
+              parentType="photo"
+              parentId={photo.id}
+              next={`/photos/${photo.id}`}
               comments={comments}
               reaction={reaction}
               flaggedIds={flaggedIds}

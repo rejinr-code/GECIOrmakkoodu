@@ -128,8 +128,13 @@ export async function saveLegalDocument(formData: FormData): Promise<void> {
 export async function removeFlaggedComment(formData: FormData): Promise<void> {
   const { supabase, session } = await requireStaff();
   const commentId = String(formData.get("comment_id") ?? "");
-  const photoId = String(formData.get("photo_id") ?? "");
   if (!commentId) throw new Error("Missing note.");
+
+  const { data: comment } = await supabase
+    .from("comments")
+    .select("parent_type, parent_id")
+    .eq("id", commentId)
+    .maybeSingle();
 
   const { error: commentError } = await supabase
     .from("comments")
@@ -150,7 +155,18 @@ export async function removeFlaggedComment(formData: FormData): Promise<void> {
   if (reportError) throw new Error(reportError.message);
 
   revalidatePath("/admin/reports");
-  if (photoId) revalidatePath(`/photos/${photoId}`);
+  if (comment?.parent_type === "photo" && comment.parent_id) {
+    revalidatePath(`/photos/${comment.parent_id}`);
+  }
+  if (comment?.parent_type === "article" && comment.parent_id) {
+    const { data: article } = await supabase
+      .from("articles")
+      .select("slug")
+      .eq("id", comment.parent_id)
+      .maybeSingle();
+    if (article?.slug) revalidatePath(`/articles/${article.slug}`);
+    revalidatePath("/articles");
+  }
 }
 
 export async function dismissCommentReport(formData: FormData): Promise<void> {

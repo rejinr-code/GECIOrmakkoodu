@@ -1,10 +1,18 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { addPhotoComment } from "@/lib/actions/engagement";
-import { COMMENT_MAX_LENGTH } from "@/lib/engagement";
+import { addComment } from "@/lib/actions/engagement";
+import { COMMENT_MAX_LENGTH, type MemoryParent } from "@/lib/engagement";
 
-export function CommentComposer({ photoId }: { photoId: string }) {
+export function CommentComposer({
+  parentType,
+  parentId,
+  next,
+}: {
+  parentType: MemoryParent;
+  parentId: string;
+  next: string;
+}) {
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -14,7 +22,7 @@ export function CommentComposer({ photoId }: { photoId: string }) {
       className="mt-6"
       action={async (formData) => {
         setError(null);
-        const result = await addPhotoComment(formData);
+        const result = await addComment(formData);
         if (result && "error" in result && result.error) {
           setError(result.error);
           return;
@@ -22,7 +30,9 @@ export function CommentComposer({ photoId }: { photoId: string }) {
         formRef.current?.reset();
       }}
     >
-      <input type="hidden" name="photo_id" value={photoId} />
+      <input type="hidden" name="parent_type" value={parentType} />
+      <input type="hidden" name="parent_id" value={parentId} />
+      <input type="hidden" name="next" value={next} />
       <label className="block">
         <span className="text-caption text-muted">Leave a comment</span>
         <textarea

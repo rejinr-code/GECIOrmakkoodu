@@ -1,28 +1,49 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { COMMENT_MAX_LENGTH, isFlagReason } from "@/lib/engagement";
+import {
+  COMMENT_MAX_LENGTH,
+  isFlagReason,
+  isMemoryParent,
+  type MemoryParent,
+} from "@/lib/engagement";
 import { isSupabaseConfigured } from "@/lib/env";
 import { getSession, isVerified } from "@/lib/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 export type ActionResult = { error?: string } | void;
 
-function revalidatePhoto(photoId: string) {
-  revalidatePath(`/photos/${photoId}`);
+function revalidateMemory(parentType: MemoryParent, parentId: string, next: string) {
+  if (next.startsWith("/photos/") || next.startsWith("/articles/")) {
+    revalidatePath(next);
+  } else if (parentType === "photo") {
+    revalidatePath(`/photos/${parentId}`);
+  } else {
+    revalidatePath("/articles");
+  }
   revalidatePath("/admin/reports");
 }
 
-export async function togglePhotoLike(formData: FormData): Promise<ActionResult> {
+function readParent(formData: FormData): { parentType: MemoryParent; parentId: string } | { error: string } {
+  const parentType = String(formData.get("parent_type") ?? "");
+  const parentId = String(formData.get("parent_id") ?? "");
+  if (!isMemoryParent(parentType) || !parentId) {
+    return { error: "Missing item." };
+  }
+  return { parentType, parentId };
+}
+
+export async function toggleLike(formData: FormData): Promise<ActionResult> {
   if (!isSupabaseConfigured()) {
     return { error: "The archive is not connected yet." };
   }
 
-  const photoId = String(formData.get("photo_id") ?? "");
-  if (!photoId) return { error: "Missing photograph." };
+  const parent = readParent(formData);
+  if ("error" in parent) return parent;
+  const next = String(formData.get("next") ?? "");
 
   const session = await getSession();
-  if (!session.userId) return { error: "Sign in to like a photograph." };
+  if (!session.userId) return { error: "Sign in to like this." };
   if (!isVerified(session.profile)) {
     return { error: "Verification comes first, then likes." };
   }
@@ -31,8 +52,8 @@ export async function togglePhotoLike(formData: FormData): Promise<ActionResult>
   const { data: existing } = await supabase
     .from("reactions")
     .select("id")
-    .eq("parent_type", "photo")
-    .eq("parent_id", photoId)
+    .eq("parent_type", parent.parentType)
+    .eq("parent_id", parent.parentId)
     .eq("user_id", session.userId)
     .is("deleted_at", null)
     .maybeSingle();
@@ -42,8 +63,8 @@ export async function togglePhotoLike(formData: FormData): Promise<ActionResult>
     if (error) return { error: error.message };
   } else {
     const { error } = await supabase.from("reactions").insert({
-      parent_type: "photo",
-      parent_id: photoId,
+      parent_type: parent.parentType,
+      parent_id: parent.parentId,
       user_id: session.userId,
     });
     if (error && error.code !== "23505") {
@@ -54,18 +75,19 @@ export async function togglePhotoLike(formData: FormData): Promise<ActionResult>
     }
   }
 
-  revalidatePhoto(photoId);
+  revalidateMemory(parent.parentType, parent.parentId, next);
 }
 
-export async function addPhotoComment(formData: FormData): Promise<ActionResult> {
+export async function addComment(formData: FormData): Promise<ActionResult> {
   if (!isSupabaseConfigured()) {
     return { error: "The archive is not connected yet." };
   }
 
-  const photoId = String(formData.get("photo_id") ?? "");
+  const parent = readParent(formData);
+  if ("error" in parent) return parent;
+  const next = String(formData.get("next") ?? "");
   const body = String(formData.get("body") ?? "").trim();
 
-  if (!photoId) return { error: "Missing photograph." };
   if (!body) return { error: "Write a short note first." };
   if (body.length > COMMENT_MAX_LENGTH) {
     return { error: `Keep notes under ${COMMENT_MAX_LENGTH} characters.` };
@@ -79,8 +101,8 @@ export async function addPhotoComment(formData: FormData): Promise<ActionResult>
 
   const supabase = await createServerSupabaseClient();
   const { error } = await supabase.from("comments").insert({
-    parent_type: "photo",
-    parent_id: photoId,
+    parent_type: parent.parentType,
+    parent_id: parent.parentId,
     author_id: session.userId,
     body,
   });
@@ -92,16 +114,17 @@ export async function addPhotoComment(formData: FormData): Promise<ActionResult>
     return { error: error.message };
   }
 
-  revalidatePhoto(photoId);
+  revalidateMemory(parent.parentType, parent.parentId, next);
 }
 
-export async function flagPhotoComment(formData: FormData): Promise<ActionResult> {
+export async function flagComment(formData: FormData): Promise<ActionResult> {
   if (!isSupabaseConfigured()) {
     return { error: "The archive is not connected yet." };
   }
 
   const commentId = String(formData.get("comment_id") ?? "");
-  const photoId = String(formData.get("photo_id") ?? "");
+  const parent = readParent(formData);
+  const next = String(formData.get("next") ?? "");
   const reason = String(formData.get("reason") ?? "").trim();
 
   if (!commentId) return { error: "Missing note." };
@@ -125,6 +148,9 @@ export async function flagPhotoComment(formData: FormData): Promise<ActionResult
     return { error: error.message };
   }
 
-  if (photoId) revalidatePhoto(photoId);
-  else revalidatePath("/admin/reports");
+  if (!("error" in parent)) {
+    revalidateMemory(parent.parentType, parent.parentId, next);
+  } else {
+    revalidatePath("/admin/reports");
+  }
 }

@@ -3,8 +3,17 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ContributorLink } from "@/components/ContributorLink";
 import { MarkdownBody, PaperPage } from "@/components/MarkdownBody";
+import { PhotoEngagement } from "@/components/PhotoEngagement";
 import { formatBatchLabel, siteConfig } from "@/config/site";
-import { contactEmail, getArticle, getPublicProfile, getSettings } from "@/lib/data";
+import {
+  contactEmail,
+  getArticle,
+  getPublicProfile,
+  getReactionState,
+  getSettings,
+  listComments,
+  listMyOpenCommentFlags,
+} from "@/lib/data";
 import { removalMailto } from "@/lib/mailto";
 import { publicEnv } from "@/lib/env";
 import { getSession, isStaff } from "@/lib/session";
@@ -45,6 +54,18 @@ export default async function ArticlePage({ params }: Props) {
   const settings = await getSettings();
   const email = contactEmail(settings);
   const itemUrl = `${publicEnv.siteUrl}/articles/${article.slug}`;
+  const commentsEnabled = isPublic && settings?.feature_comments !== false;
+  const comments = commentsEnabled ? await listComments("article", article.id) : [];
+  const reaction = commentsEnabled
+    ? await getReactionState("article", article.id, session.userId)
+    : { count: 0, liked: false };
+  const flaggedIds =
+    commentsEnabled && session.userId
+      ? await listMyOpenCommentFlags(
+          session.userId,
+          comments.map((comment) => comment.id),
+        )
+      : new Set<string>();
   const author =
     !article.anonymised && article.author_id
       ? await getPublicProfile(article.author_id)
@@ -102,6 +123,17 @@ export default async function ArticlePage({ params }: Props) {
             Request removal
           </a>
         </p>
+      ) : null}
+      {commentsEnabled ? (
+        <PhotoEngagement
+          parentType="article"
+          parentId={article.id}
+          next={`/articles/${article.slug}`}
+          comments={comments}
+          reaction={reaction}
+          flaggedIds={flaggedIds}
+          session={session}
+        />
       ) : null}
     </PaperPage>
   );

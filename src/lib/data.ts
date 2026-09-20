@@ -485,7 +485,7 @@ export async function getStorageStats() {
   };
 }
 
-export type PhotoComment = {
+export type MemoryComment = {
   id: string;
   body: string;
   createdAt: string;
@@ -494,7 +494,7 @@ export type PhotoComment = {
   authorName: string;
 };
 
-export type PhotoReactionState = {
+export type ReactionState = {
   count: number;
   liked: boolean;
 };
@@ -507,6 +507,7 @@ export type OpenCommentReport = {
   commentId: string;
   commentBody: string;
   photoId: string | null;
+  articleSlug: string | null;
   commentStatus: string | null;
 };
 
@@ -527,14 +528,17 @@ async function namesForIds(
   return names;
 }
 
-export async function listPhotoComments(photoId: string): Promise<PhotoComment[]> {
+export async function listComments(
+  parentType: "photo" | "article",
+  parentId: string,
+): Promise<MemoryComment[]> {
   if (!isSupabaseConfigured()) return [];
   const supabase = await createServerSupabaseClient();
   const { data } = await supabase
     .from("comments")
     .select("id, body, created_at, author_id, anonymised")
-    .eq("parent_type", "photo")
-    .eq("parent_id", photoId)
+    .eq("parent_type", parentType)
+    .eq("parent_id", parentId)
     .eq("status", "visible")
     .is("deleted_at", null)
     .order("created_at", { ascending: true })
@@ -564,17 +568,18 @@ export async function listPhotoComments(photoId: string): Promise<PhotoComment[]
   }));
 }
 
-export async function getPhotoReactionState(
-  photoId: string,
+export async function getReactionState(
+  parentType: "photo" | "article",
+  parentId: string,
   userId: string | null,
-): Promise<PhotoReactionState> {
+): Promise<ReactionState> {
   if (!isSupabaseConfigured()) return { count: 0, liked: false };
   const supabase = await createServerSupabaseClient();
   const { count } = await supabase
     .from("reactions")
     .select("id", { count: "exact", head: true })
-    .eq("parent_type", "photo")
-    .eq("parent_id", photoId)
+    .eq("parent_type", parentType)
+    .eq("parent_id", parentId)
     .is("deleted_at", null);
 
   let liked = false;
@@ -582,8 +587,8 @@ export async function getPhotoReactionState(
     const { data } = await supabase
       .from("reactions")
       .select("id")
-      .eq("parent_type", "photo")
-      .eq("parent_id", photoId)
+      .eq("parent_type", parentType)
+      .eq("parent_id", parentId)
       .eq("user_id", userId)
       .is("deleted_at", null)
       .maybeSingle();
@@ -633,6 +638,23 @@ export async function listOpenCommentReports(): Promise<OpenCommentReport[]> {
     .in("id", commentIds);
 
   const commentsById = new Map((comments ?? []).map((row) => [row.id, row]));
+  const articleIds = [
+    ...new Set(
+      (comments ?? [])
+        .filter((row) => row.parent_type === "article")
+        .map((row) => row.parent_id),
+    ),
+  ];
+  const articleSlugs = new Map<string, string>();
+  if (articleIds.length > 0) {
+    const { data: articles } = await supabase
+      .from("articles")
+      .select("id, slug")
+      .in("id", articleIds);
+    for (const article of articles ?? []) {
+      articleSlugs.set(article.id, article.slug);
+    }
+  }
   const reporterIds = rows
     .map((row) => row.reporter_id)
     .filter((id): id is string => Boolean(id));
@@ -658,8 +680,11 @@ export async function listOpenCommentReports(): Promise<OpenCommentReport[]> {
         : "Former member",
       commentId: row.target_id,
       commentBody: comment?.body ?? "This note is no longer visible.",
-      photoId:
-        comment?.parent_type === "photo" ? comment.parent_id : null,
+      photoId: comment?.parent_type === "photo" ? comment.parent_id : null,
+      articleSlug:
+        comment?.parent_type === "article"
+          ? (articleSlugs.get(comment.parent_id) ?? null)
+          : null,
       commentStatus: comment?.status ?? null,
     };
   });

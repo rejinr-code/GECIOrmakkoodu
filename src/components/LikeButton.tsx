@@ -1,15 +1,20 @@
 "use client";
 
 import { useState } from "react";
-import { togglePhotoLike } from "@/lib/actions/engagement";
+import { toggleLike } from "@/lib/actions/engagement";
+import type { MemoryParent } from "@/lib/engagement";
 
 export function LikeButton({
-  photoId,
+  parentType,
+  parentId,
+  next,
   liked,
   count,
   canLike,
 }: {
-  photoId: string;
+  parentType: MemoryParent;
+  parentId: string;
+  next: string;
   liked: boolean;
   count: number;
   canLike: boolean;
@@ -29,13 +34,15 @@ export function LikeButton({
     <form
       action={async (formData) => {
         setError(null);
-        const result = await togglePhotoLike(formData);
+        const result = await toggleLike(formData);
         if (result && "error" in result && result.error) {
           setError(result.error);
         }
       }}
     >
-      <input type="hidden" name="photo_id" value={photoId} />
+      <input type="hidden" name="parent_type" value={parentType} />
+      <input type="hidden" name="parent_id" value={parentId} />
+      <input type="hidden" name="next" value={next} />
       <button
         type="submit"
         className={`inline-flex min-h-11 items-center font-medium ${

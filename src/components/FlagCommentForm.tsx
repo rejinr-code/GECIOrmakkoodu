@@ -1,15 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { flagPhotoComment } from "@/lib/actions/engagement";
-import { FLAG_REASONS } from "@/lib/engagement";
+import { flagComment } from "@/lib/actions/engagement";
+import { FLAG_REASONS, type MemoryParent } from "@/lib/engagement";
 
 export function FlagCommentForm({
   commentId,
-  photoId,
+  parentType,
+  parentId,
+  next,
 }: {
   commentId: string;
-  photoId: string;
+  parentType: MemoryParent;
+  parentId: string;
+  next: string;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -27,7 +31,7 @@ export function FlagCommentForm({
         className="mt-2 max-w-xs"
         action={async (formData) => {
           setError(null);
-          const result = await flagPhotoComment(formData);
+          const result = await flagComment(formData);
           if (result && "error" in result && result.error) {
             setError(result.error);
             return;
@@ -36,7 +40,9 @@ export function FlagCommentForm({
         }}
       >
         <input type="hidden" name="comment_id" value={commentId} />
-        <input type="hidden" name="photo_id" value={photoId} />
+        <input type="hidden" name="parent_type" value={parentType} />
+        <input type="hidden" name="parent_id" value={parentId} />
+        <input type="hidden" name="next" value={next} />
         <label className="block">
           <span className="sr-only">Reason</span>
           <select name="reason" required className="field-ink mt-1">

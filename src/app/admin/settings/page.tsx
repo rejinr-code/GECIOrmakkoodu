@@ -64,7 +64,7 @@ export default async function SettingsPage() {
             defaultChecked={settings?.feature_comments ?? true}
             className="size-4"
           />
-          <span className="text-caption">Allow likes and comments on photographs</span>
+          <span className="text-caption">Allow likes and comments on photographs and letters</span>
         </label>
         <button type="submit" className="btn btn-green">
           Save settings

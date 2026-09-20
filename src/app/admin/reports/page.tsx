@@ -11,8 +11,8 @@ export default async function ReportsPage() {
     <main className="px-4 py-10 sm:px-8">
       <h1 className="text-h1 font-medium tracking-wordmark">Flagged comments</h1>
       <p className="mt-3 max-w-prose text-muted">
-        Members can flag a note. Remove it from the photograph, or dismiss the
-        flag if it should stay.
+        Members can flag a note. Remove it from the photograph or letter, or
+        dismiss the flag if it should stay.
       </p>
 
       {reports.length === 0 ? (
@@ -35,10 +35,19 @@ export default async function ReportsPage() {
                   </Link>
                 </p>
               ) : null}
+              {report.articleSlug ? (
+                <p className="mt-1 text-caption">
+                  <Link
+                    href={`/articles/${report.articleSlug}`}
+                    className="underline underline-offset-4"
+                  >
+                    Open letter
+                  </Link>
+                </p>
+              ) : null}
               <div className="mt-4 flex flex-wrap gap-3">
                 <form action={removeFlaggedComment}>
                   <input type="hidden" name="comment_id" value={report.commentId} />
-                  <input type="hidden" name="photo_id" value={report.photoId ?? ""} />
                   <button type="submit" className="btn btn-green">
                     Remove comment
                   </button>
