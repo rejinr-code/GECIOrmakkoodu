@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatBatchLabel } from "@/config/site";
+import { ModerationSelect, SelectBox } from "@/components/ModerationSelect";
 import { moderateArticle } from "@/lib/actions/admin";
 import { listPendingArticles } from "@/lib/data";
 
@@ -18,10 +19,17 @@ export default async function AdminLettersPage() {
       {pending.length === 0 ? (
         <p className="mt-10 text-lead">Nothing waiting.</p>
       ) : (
-        <ul className="mt-10 space-y-10">
-          {pending.map((article) => (
-            <li key={article.id} className="border-t border-ink/8 pt-6">
-              <p className="text-lead font-medium">{article.title}</p>
+        <ModerationSelect
+          ids={pending.map((article) => article.id)}
+          action={moderateArticle}
+          approveValue="published"
+          approveLabel="Publish selected"
+        >
+          <ul className="mt-10 space-y-10">
+            {pending.map((article) => (
+              <li key={article.id} className="border-t border-ink/8 pt-6">
+                <SelectBox id={article.id} label="Select" />
+                <p className="mt-2 text-lead font-medium">{article.title}</p>
               <p className="mt-2 text-caption text-muted">
                 {article.authorName}
                 {article.batchYear ? ` · ${formatBatchLabel(article.batchYear)}` : ""}
@@ -65,7 +73,8 @@ export default async function AdminLettersPage() {
               </div>
             </li>
           ))}
-        </ul>
+          </ul>
+        </ModerationSelect>
       )}
     </main>
   );

@@ -9,10 +9,11 @@ import { signOut } from "@/lib/actions/auth";
 type Props = {
   session: SessionState;
   prompt?: { theme: string; body: string | null } | null;
+  consentStale?: boolean;
   features?: { directory?: boolean; mentoring?: boolean };
 };
 
-export function SiteHeader({ session, prompt, features }: Props) {
+export function SiteHeader({ session, prompt, consentStale, features }: Props) {
   const links = [
     { href: "/", label: "Archive" },
     { href: "/articles", label: "Letters" },
@@ -88,6 +89,15 @@ export function SiteHeader({ session, prompt, features }: Props) {
         ) : null}
       </nav>
 
+      {consentStale ? (
+        <p className="border-t border-gold/40 bg-gold/10 px-4 py-3 text-caption text-ink sm:px-6">
+          The privacy notice was updated.{" "}
+          <Link href="/join" className="underline underline-offset-4">
+            Read and accept it again
+          </Link>{" "}
+          before adding to the archive.
+        </p>
+      ) : null}
       {session.profile && session.profile.status === "pending" ? (
         <p className="border-t border-gold/40 bg-gold/10 px-4 py-3 text-caption text-ink sm:px-6">
           A volunteer still needs to verify you against the alumni list. You can

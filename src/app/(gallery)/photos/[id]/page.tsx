@@ -5,6 +5,7 @@ import { ContributorLink } from "@/components/ContributorLink";
 import { DownloadPrint } from "@/components/DownloadPrint";
 import { FlagItemForm } from "@/components/FlagItemForm";
 import { PhotoEngagement } from "@/components/PhotoEngagement";
+import { PhotoLightbox } from "@/components/PhotoLightbox";
 import {
   formatBatchLabel,
   isTimelineView,
@@ -137,13 +138,15 @@ export default async function PhotoPage({ params, searchParams }: Props) {
     <main className="px-4 py-10 sm:px-8">
       <div className="mx-auto max-w-5xl">
         {imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <PhotoLightbox
             src={imageUrl}
             alt={photo.alt_text}
             width={photo.width}
             height={photo.height}
-            className="print-mat max-h-[80dvh] w-full object-contain"
+            previousHref={
+              neighbors.previousId ? photoHref(neighbors.previousId, hrefOptions) : null
+            }
+            nextHref={neighbors.nextId ? photoHref(neighbors.nextId, hrefOptions) : null}
           />
         ) : (
           <div className="print-mat flex min-h-64 items-end p-6 text-muted">

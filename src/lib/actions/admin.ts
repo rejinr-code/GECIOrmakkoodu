@@ -20,6 +20,16 @@ async function requireStaff() {
   return { session, supabase: await createServerSupabaseClient() };
 }
 
+function collectIds(formData: FormData): string[] {
+  const many = formData
+    .getAll("ids")
+    .map((value) => String(value).trim())
+    .filter(Boolean);
+  const one = String(formData.get("id") ?? "").trim();
+  const ids = [...new Set(many.length > 0 ? many : one ? [one] : [])];
+  return ids.slice(0, 40);
+}
+
 export async function setVerification(
   userId: string,
   status: "verified" | "rejected",
@@ -229,10 +239,10 @@ export async function removeReportedItem(formData: FormData): Promise<void> {
 
 export async function moderatePhoto(formData: FormData): Promise<void> {
   const { supabase } = await requireStaff();
-  const id = String(formData.get("id") ?? "");
+  const ids = collectIds(formData);
   const decision = String(formData.get("decision") ?? "");
   const reason = String(formData.get("rejection_reason") ?? "").trim();
-  if (!id) throw new Error("Missing photograph.");
+  if (ids.length === 0) throw new Error("Choose a photograph.");
   if (decision !== "approved" && decision !== "rejected") {
     throw new Error("Choose approve or reject.");
   }
@@ -243,22 +253,25 @@ export async function moderatePhoto(formData: FormData): Promise<void> {
       status: decision,
       rejection_reason: decision === "rejected" ? reason || "Not suitable for the archive." : null,
     })
-    .eq("id", id);
+    .in("id", ids)
+    .eq("status", "pending");
   if (error) throw new Error(error.message);
 
   revalidatePath("/admin/photos");
-  revalidatePath(`/photos/${id}`);
   revalidatePath("/");
   revalidatePath("/account");
+  for (const id of ids) {
+    revalidatePath(`/photos/${id}`);
+  }
 }
 
 export async function moderateArticle(formData: FormData): Promise<void> {
   const { supabase } = await requireStaff();
-  const id = String(formData.get("id") ?? "");
+  const ids = collectIds(formData);
   const decision = String(formData.get("decision") ?? "");
   const slug = String(formData.get("slug") ?? "");
   const reason = String(formData.get("rejection_reason") ?? "").trim();
-  if (!id) throw new Error("Missing letter.");
+  if (ids.length === 0) throw new Error("Choose a letter.");
   if (decision !== "published" && decision !== "rejected") {
     throw new Error("Choose publish or reject.");
   }
@@ -269,7 +282,8 @@ export async function moderateArticle(formData: FormData): Promise<void> {
       status: decision,
       rejection_reason: decision === "rejected" ? reason || "Not suitable for the archive." : null,
     })
-    .eq("id", id);
+    .in("id", ids)
+    .eq("status", "pending");
   if (error) throw new Error(error.message);
 
   revalidatePath("/admin/letters");
@@ -281,10 +295,10 @@ export async function moderateArticle(formData: FormData): Promise<void> {
 
 export async function moderateOffer(formData: FormData): Promise<void> {
   const { supabase } = await requireStaff();
-  const id = String(formData.get("id") ?? "");
+  const ids = collectIds(formData);
   const decision = String(formData.get("decision") ?? "");
   const reason = String(formData.get("rejection_reason") ?? "").trim();
-  if (!id) throw new Error("Missing offer.");
+  if (ids.length === 0) throw new Error("Choose an offer.");
   if (decision !== "approved" && decision !== "rejected") {
     throw new Error("Choose approve or reject.");
   }
@@ -295,13 +309,16 @@ export async function moderateOffer(formData: FormData): Promise<void> {
       status: decision,
       rejection_reason: decision === "rejected" ? reason || "Not suitable for the board." : null,
     })
-    .eq("id", id);
+    .in("id", ids)
+    .eq("status", "pending");
   if (error) throw new Error(error.message);
 
   revalidatePath("/admin/offers");
-  revalidatePath(`/offers/${id}`);
   revalidatePath("/offers");
   revalidatePath("/account");
+  for (const id of ids) {
+    revalidatePath(`/offers/${id}`);
+  }
 }
 
 export async function saveMonthlyPrompt(formData: FormData): Promise<void> {

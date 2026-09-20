@@ -140,6 +140,14 @@ body {
   filter: brightness(1.03);
 }
 
+.photo-lightbox {
+  border: none;
+}
+
+.photo-lightbox::backdrop {
+  background: color-mix(in srgb, var(--color-paper) 82%, var(--color-ink));
+}
+
 @keyframes wall-settle {
   from {
     opacity: 0.01;

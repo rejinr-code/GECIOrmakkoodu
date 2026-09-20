@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ModerationSelect, SelectBox } from "@/components/ModerationSelect";
 import { moderateOffer } from "@/lib/actions/admin";
 import { listPendingOffers } from "@/lib/data";
 
@@ -18,10 +19,17 @@ export default async function AdminOffersPage() {
       {pending.length === 0 ? (
         <p className="mt-10 text-lead">Nothing waiting.</p>
       ) : (
-        <ul className="mt-10 space-y-10">
-          {pending.map((offer) => (
-            <li key={offer.id} className="border-t border-ink/8 pt-6">
-              <p className="text-caption uppercase tracking-wide text-muted">
+        <ModerationSelect
+          ids={pending.map((offer) => offer.id)}
+          action={moderateOffer}
+          approveValue="approved"
+          approveLabel="Approve selected"
+        >
+          <ul className="mt-10 space-y-10">
+            {pending.map((offer) => (
+              <li key={offer.id} className="border-t border-ink/8 pt-6">
+                <SelectBox id={offer.id} label="Select" />
+                <p className="mt-2 text-caption uppercase tracking-wide text-muted">
                 {offer.kind === "internship" ? "Internship" : "Mentoring"}
               </p>
               <p className="text-lead font-medium">{offer.title}</p>
@@ -63,7 +71,8 @@ export default async function AdminOffersPage() {
               </div>
             </li>
           ))}
-        </ul>
+          </ul>
+        </ModerationSelect>
       )}
     </main>
   );

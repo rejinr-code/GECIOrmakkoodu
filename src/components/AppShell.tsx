@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
 import { contactEmail, getCurrentPrompt, getSettings } from "@/lib/data";
-import { getSession } from "@/lib/session";
+import { getSession, isProfileComplete } from "@/lib/session";
 
 export async function AppShell({
   rail = false,
@@ -21,6 +21,14 @@ export async function AppShell({
       <SiteHeader
         session={session}
         prompt={prompt}
+        consentStale={
+          Boolean(
+            session.profile &&
+              isProfileComplete(session.profile) &&
+              settings?.consent_version &&
+              session.profile.consent_version !== settings.consent_version,
+          )
+        }
         features={{
           directory: settings?.feature_directory === true,
           mentoring: settings?.feature_mentoring === true,

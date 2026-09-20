@@ -23,7 +23,7 @@ export default async function JoinPage() {
           <h1 className="text-h1 font-medium tracking-wordmark">You are in</h1>
           <p className="mt-4 max-w-md">
             {session.profile?.status === "verified"
-              ? "Your account is verified. The photograph wall is yours to fill in the next phase."
+              ? "Your account is verified. You can add photographs, write a letter, or list yourself in People."
               : "A volunteer still needs to match you to the alumni list. You can keep browsing in the meantime."}
           </p>
           <Link href="/" className="btn btn-green mt-8">
