@@ -23,6 +23,7 @@ export type PhotoCard = {
   contributorId: string | null;
   anonymised: boolean;
   likeCount: number;
+  commentCount: number;
 };
 
 export type ArticleCard = {
@@ -220,21 +221,24 @@ export async function listApprovedPhotos(options: {
           : row.uploader_id,
       anonymised: row.anonymised,
       likeCount: 0,
+      commentCount: 0,
     });
   }
 
-  return { photos: await withLikeCounts(photos), total: count ?? 0 };
+  return { photos: await withCardCounts(photos), total: count ?? 0 };
 }
 
-async function withLikeCounts(photos: PhotoCard[]): Promise<PhotoCard[]> {
+async function withCardCounts(photos: PhotoCard[]): Promise<PhotoCard[]> {
   if (photos.length === 0 || !isSupabaseConfigured()) return photos;
-  const counts = await reactionCounts(
-    "photo",
-    photos.map((photo) => photo.id),
-  );
+  const ids = photos.map((photo) => photo.id);
+  const [likes, comments] = await Promise.all([
+    reactionCounts("photo", ids),
+    photoCommentCounts(ids),
+  ]);
   return photos.map((photo) => ({
     ...photo,
-    likeCount: counts.get(photo.id) ?? 0,
+    likeCount: likes.get(photo.id) ?? 0,
+    commentCount: comments.get(photo.id) ?? 0,
   }));
 }
 
@@ -249,6 +253,23 @@ async function reactionCounts(
     .from("reactions")
     .select("parent_id")
     .eq("parent_type", parentType)
+    .in("parent_id", ids)
+    .is("deleted_at", null);
+  for (const row of data ?? []) {
+    counts.set(row.parent_id, (counts.get(row.parent_id) ?? 0) + 1);
+  }
+  return counts;
+}
+
+async function photoCommentCounts(ids: string[]): Promise<Map<string, number>> {
+  const counts = new Map<string, number>();
+  if (ids.length === 0 || !isSupabaseConfigured()) return counts;
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("comments")
+    .select("parent_id")
+    .eq("parent_type", "photo")
+    .eq("status", "visible")
     .in("parent_id", ids)
     .is("deleted_at", null);
   for (const row of data ?? []) {
@@ -325,6 +346,7 @@ export async function listYearAlbums(limit?: number): Promise<YearAlbum[]> {
         contributorId: null,
         anonymised: coverRow.anonymised,
         likeCount: counts.get(coverRow.id) ?? 0,
+        commentCount: 0,
       };
     }
     return { year, count: list.length, cover };
@@ -387,20 +409,22 @@ export async function listRememberedPhotos(limit = 12): Promise<PhotoCard[]> {
         contributorId: null,
         anonymised: row.anonymised,
         likeCount: counts.get(row.id) ?? 0,
+        commentCount: 0,
       });
     }
   }
 
-  if (remembered.length >= limit) return remembered.slice(0, limit);
+  const counted = await withCardCounts(remembered);
+  if (counted.length >= limit) return counted.slice(0, limit);
 
   const { photos } = await listApprovedPhotos({ page: 1 });
-  const seen = new Set(remembered.map((photo) => photo.id));
+  const seen = new Set(counted.map((photo) => photo.id));
   for (const photo of photos) {
     if (seen.has(photo.id)) continue;
-    remembered.push(photo);
-    if (remembered.length >= limit) break;
+    counted.push(photo);
+    if (counted.length >= limit) break;
   }
-  return remembered;
+  return counted;
 }
 
 export async function getPhoto(id: string) {
@@ -831,6 +855,7 @@ async function mapPhotoCards(
           : row.uploader_id,
       anonymised: row.anonymised,
       likeCount: 0,
+      commentCount: 0,
       status: row.status,
       eventTag: row.event_tag,
       peopleTagged: row.people_tagged,

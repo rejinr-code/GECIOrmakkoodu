@@ -24,7 +24,7 @@ export function LikeButton({
 
   if (!canLike) {
     return (
-      <p className="text-caption text-muted">
+      <p className="inline-flex min-h-11 items-center rounded-full bg-surface/80 px-4 text-caption">
         {count} {label}
       </p>
     );

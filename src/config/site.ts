@@ -147,6 +147,7 @@ export function photoHref(
     branch?: string | null;
     event?: string | null;
     view?: "timeline";
+    open?: boolean;
   },
 ): string {
   const params = new URLSearchParams();
@@ -157,6 +158,7 @@ export function photoHref(
     if (options.branch) params.set("branch", options.branch);
   }
   if (options?.event) params.set("event", options.event);
+  if (options?.open) params.set("open", "1");
   const query = params.toString();
   return query ? `/photos/${id}?${query}` : `/photos/${id}`;
 }

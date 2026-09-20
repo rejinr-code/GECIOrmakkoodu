@@ -6,7 +6,7 @@ import { DownloadPrint } from "@/components/DownloadPrint";
 import { FlagItemForm } from "@/components/FlagItemForm";
 import { StaffRemoveForm } from "@/components/StaffRemoveForm";
 import { PhotoEngagement } from "@/components/PhotoEngagement";
-import { PhotoLightbox } from "@/components/PhotoLightbox";
+import { PhotoViewer } from "@/components/PhotoViewer";
 import {
   formatBatchLabel,
   isTimelineView,
@@ -35,7 +35,13 @@ import { getSession, isStaff } from "@/lib/session";
 
 type Props = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ year?: string; branch?: string; event?: string; view?: string }>;
+  searchParams: Promise<{
+    year?: string;
+    branch?: string;
+    event?: string;
+    view?: string;
+    open?: string;
+  }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -134,20 +140,46 @@ export default async function PhotoPage({ params, searchParams }: Props) {
     ? "Former member"
     : (contributorProfile?.name ?? (photo.uploader_id ? "GECIAN" : "Former member"));
   const contributorId = contributorProfile?.id ?? null;
+  const viewerContext = {
+    timeline,
+    year,
+    branch,
+    event,
+  };
+  const slide = imageUrl
+    ? {
+        id: photo.id,
+        src: imageUrl,
+        alt: photo.alt_text,
+        caption: photo.caption,
+        width: photo.width,
+        height: photo.height,
+        batchYear: photo.batch_year,
+        batchLabel: formatBatchLabel(photo.batch_year),
+        branch: photo.branch,
+        eventLabel: eventLabel ?? null,
+        contributorName,
+        likeCount: reaction.count,
+        liked: reaction.liked,
+        comments,
+        previousId: neighbors.previousId,
+        nextId: neighbors.nextId,
+        previousSrc: null,
+        nextSrc: null,
+        href: photoHref(photo.id, { ...hrefOptions, open: true }),
+      }
+    : null;
 
   return (
     <main className="px-4 py-10 sm:px-8">
       <div className="mx-auto max-w-5xl">
-        {imageUrl ? (
-          <PhotoLightbox
-            src={imageUrl}
-            alt={photo.alt_text}
-            width={photo.width}
-            height={photo.height}
-            previousHref={
-              neighbors.previousId ? photoHref(neighbors.previousId, hrefOptions) : null
-            }
-            nextHref={neighbors.nextId ? photoHref(neighbors.nextId, hrefOptions) : null}
+        {slide ? (
+          <PhotoViewer
+            slide={slide}
+            context={viewerContext}
+            startOpen={isPublic && query.open === "1"}
+            commentsEnabled={commentsEnabled}
+            session={session}
           />
         ) : (
           <div className="print-mat flex min-h-64 items-end rounded-2xl p-6 text-muted">
@@ -237,7 +269,7 @@ export default async function PhotoPage({ params, searchParams }: Props) {
             <PhotoEngagement
               parentType="photo"
               parentId={photo.id}
-              next={`/photos/${photo.id}`}
+              next={photoHref(photo.id, hrefOptions)}
               comments={comments}
               reaction={reaction}
               flaggedIds={flaggedIds}

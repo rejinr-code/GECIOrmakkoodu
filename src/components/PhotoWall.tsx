@@ -56,11 +56,13 @@ export function PhotoWall({
                 </span>
                 <span className="sr-only">, {photo.contributorName}</span>
               </span>
-              {photo.likeCount > 0 ? (
-                <span className="shrink-0 rounded-full bg-paper/15 px-2 py-0.5 text-caption">
-                  {photo.likeCount}
+              <span className="shrink-0 rounded-full bg-paper/15 px-2 py-0.5 text-caption">
+                {photo.likeCount} {photo.likeCount === 1 ? "like" : "likes"}
+                <span className="mx-1 opacity-60" aria-hidden>
+                  ·
                 </span>
-              ) : null}
+                {photo.commentCount} {photo.commentCount === 1 ? "comment" : "comments"}
+              </span>
             </div>
           </div>
         </Link>
