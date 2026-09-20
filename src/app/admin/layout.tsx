@@ -39,6 +39,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
               <Link href="/admin/settings" className="inline-flex min-h-11 items-center">
                 Settings
               </Link>
+              <Link href="/admin/prompts" className="inline-flex min-h-11 items-center">
+                Prompt
+              </Link>
               <Link href="/admin/legal" className="inline-flex min-h-11 items-center">
                 Legal
               </Link>

@@ -154,3 +154,35 @@ export async function flagComment(formData: FormData): Promise<ActionResult> {
     revalidatePath("/admin/reports");
   }
 }
+
+export async function flagItem(formData: FormData): Promise<ActionResult> {
+  if (!isSupabaseConfigured()) {
+    return { error: "The archive is not connected yet." };
+  }
+
+  const parent = readParent(formData);
+  if ("error" in parent) return parent;
+  const next = String(formData.get("next") ?? "");
+  const reason = String(formData.get("reason") ?? "").trim();
+  if (!isFlagReason(reason)) return { error: "Choose a reason." };
+
+  const session = await getSession();
+  if (!session.userId) return { error: "Sign in to flag this." };
+
+  const supabase = await createServerSupabaseClient();
+  const { error } = await supabase.from("reports").insert({
+    target_type: parent.parentType,
+    target_id: parent.parentId,
+    reporter_id: session.userId,
+    reason,
+  });
+
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "You already flagged this." };
+    }
+    return { error: error.message };
+  }
+
+  revalidateMemory(parent.parentType, parent.parentId, next);
+}

@@ -18,3 +18,6 @@ export function isFlagReason(value: string): value is FlagReason {
 export function isMemoryParent(value: string): value is MemoryParent {
   return value === "photo" || value === "article";
 }
+
+export const THEME_MAX = 80;
+export const PROMPT_BODY_MAX = 400;

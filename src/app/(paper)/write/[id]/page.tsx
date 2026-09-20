@@ -21,7 +21,7 @@ export default async function EditLetterPage({ params }: Props) {
   if (article.status === "published") {
     redirect(`/articles/${article.slug}`);
   }
-  if (article.status !== "draft" && article.status !== "pending") {
+  if (article.status === "removed") {
     redirect("/account");
   }
 
@@ -31,7 +31,9 @@ export default async function EditLetterPage({ params }: Props) {
       <p className="mt-4 max-w-prose text-muted">
         {article.status === "pending"
           ? "This letter is waiting for a volunteer. You can still change it."
-          : "This draft is only visible to you."}
+          : article.status === "rejected"
+            ? `A volunteer did not publish this${article.rejection_reason ? `: ${article.rejection_reason}` : "."} You can revise it and send it again.`
+            : "This draft is only visible to you."}
       </p>
       <LetterForm
         articleId={article.id}

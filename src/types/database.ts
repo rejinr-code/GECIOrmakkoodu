@@ -282,6 +282,7 @@ export type Database = {
           body?: string | null;
           starts_at: string;
           ends_at?: string | null;
+          created_by?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["monthly_prompts"]["Row"]>;
         Relationships: [];

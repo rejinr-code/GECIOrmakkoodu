@@ -1,24 +1,40 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PhotoEngagement } from "@/components/PhotoEngagement";
-import { siteConfig } from "@/config/site";
-import { formatBatchLabel } from "@/config/site";
 import { ContributorLink } from "@/components/ContributorLink";
+import { DownloadPrint } from "@/components/DownloadPrint";
+import { FlagItemForm } from "@/components/FlagItemForm";
+import { PhotoEngagement } from "@/components/PhotoEngagement";
+import {
+  formatBatchLabel,
+  isTimelineView,
+  parseAdmissionYear,
+  parseBranch,
+  parseEventSlug,
+  photoHref,
+  siteConfig,
+} from "@/config/site";
 import {
   contactEmail,
   getPhoto,
-  getReactionState,
+  getPhotoNeighbors,
   getPublicProfile,
+  getReactionState,
   getSettings,
-  listMyOpenCommentFlags,
+  hasOpenItemFlag,
   listComments,
+  listEventTags,
+  listMyOpenCommentFlags,
 } from "@/lib/data";
 import { imageStore } from "@/lib/imageStore.server";
 import { removalMailto } from "@/lib/mailto";
 import { publicEnv } from "@/lib/env";
 import { getSession, isStaff } from "@/lib/session";
 
-type Props = { params: Promise<{ id: string }> };
+type Props = {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ year?: string; branch?: string; event?: string; view?: string }>;
+};
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
@@ -45,8 +61,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   };
 }
 
-export default async function PhotoPage({ params }: Props) {
+export default async function PhotoPage({ params, searchParams }: Props) {
   const { id } = await params;
+  const query = await searchParams;
   const photo = await getPhoto(id);
   const session = await getSession();
   if (!photo || photo.deleted_at) {
@@ -76,6 +93,26 @@ export default async function PhotoPage({ params }: Props) {
           comments.map((comment) => comment.id),
         )
       : new Set<string>();
+  const alreadyFlagged =
+    Boolean(session.userId) && isPublic
+      ? await hasOpenItemFlag(session.userId as string, "photo", photo.id)
+      : false;
+
+  const tags = await listEventTags();
+  const timeline = isTimelineView(query.view);
+  const event = parseEventSlug(query.event, tags);
+  const year = timeline ? null : (parseAdmissionYear(query.year) ?? photo.batch_year);
+  const branch = year ? parseBranch(query.branch, year) : null;
+  const hrefOptions = {
+    year,
+    branch,
+    event,
+    view: timeline ? ("timeline" as const) : undefined,
+  };
+  const neighbors = isPublic
+    ? await getPhotoNeighbors(photo, { timeline, branch, eventTag: event })
+    : { previousId: null, nextId: null };
+  const eventLabel = tags.find((tag) => tag.slug === photo.event_tag)?.label ?? photo.event_tag;
 
   let imageUrl: string | null = null;
   try {
@@ -113,6 +150,16 @@ export default async function PhotoPage({ params }: Props) {
             {photo.alt_text}
           </div>
         )}
+        {neighbors.previousId || neighbors.nextId ? (
+          <nav className="mt-4 flex min-h-11 items-center gap-6 text-caption">
+            {neighbors.previousId ? (
+              <Link href={photoHref(neighbors.previousId, hrefOptions)}>Previous</Link>
+            ) : null}
+            {neighbors.nextId ? (
+              <Link href={photoHref(neighbors.nextId, hrefOptions)}>Next</Link>
+            ) : null}
+          </nav>
+        ) : null}
         <div className="mt-6 max-w-prose">
           {!isPublic ? (
             <p className="mb-4 text-caption text-gold">
@@ -127,15 +174,24 @@ export default async function PhotoPage({ params }: Props) {
           <p className="mt-3 font-semibold tracking-year text-gold">
             {formatBatchLabel(photo.batch_year)}
             {photo.branch ? ` ${photo.branch}` : ""}
+            {eventLabel ? ` · ${eventLabel}` : ""}
           </p>
           <p className="text-caption text-muted">
             <ContributorLink id={contributorId} name={contributorName} />
           </p>
+          {photo.people_tagged.length > 0 ? (
+            <p className="mt-2 text-caption text-muted">
+              Named: {photo.people_tagged.join(", ")}
+            </p>
+          ) : null}
           <p className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-caption">
             {isPublic ? (
               <a href={itemUrl} className="inline-flex min-h-11 items-center">
                 Shareable link
               </a>
+            ) : null}
+            {isOwner && imageUrl ? (
+              <DownloadPrint url={imageUrl} filename={`${photo.id}.webp`} />
             ) : null}
             {email ? (
               <a
@@ -149,6 +205,21 @@ export default async function PhotoPage({ params }: Props) {
               >
                 Request removal
               </a>
+            ) : null}
+            {isPublic && session.userId && !isOwner && !alreadyFlagged ? (
+              <FlagItemForm
+                parentType="photo"
+                parentId={photo.id}
+                next={photoHref(photo.id, hrefOptions)}
+              />
+            ) : null}
+            {alreadyFlagged ? (
+              <span className="inline-flex min-h-11 items-center text-muted">Flagged for review</span>
+            ) : null}
+            {isPublic && !session.userId ? (
+              <Link href="/sign-in" className="inline-flex min-h-11 items-center">
+                Sign in to flag
+              </Link>
             ) : null}
           </p>
           {commentsEnabled ? (

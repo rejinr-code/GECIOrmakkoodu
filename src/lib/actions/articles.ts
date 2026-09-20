@@ -67,7 +67,7 @@ export async function saveLetter(formData: FormData): Promise<LetterResult> {
     if (!existing || existing.author_id !== session.userId) {
       return { error: "That letter could not be found." };
     }
-    if (existing.status !== "draft" && existing.status !== "pending") {
+    if (existing.status !== "draft" && existing.status !== "pending" && existing.status !== "rejected") {
       return { error: "Published letters are not edited here." };
     }
 
@@ -78,6 +78,7 @@ export async function saveLetter(formData: FormData): Promise<LetterResult> {
         body,
         batch_year: batchYear,
         status,
+        ...(existing.status === "rejected" ? { rejection_reason: null } : {}),
       })
       .eq("id", id)
       .eq("author_id", session.userId);

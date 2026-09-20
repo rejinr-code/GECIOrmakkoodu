@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BrandLockup } from "@/components/BrandLockup";
+import { PromptBanner } from "@/components/PromptBanner";
 import { siteConfig } from "@/config/site";
 import type { SessionState } from "@/lib/session";
 import { isStaff, isVerified } from "@/lib/session";
@@ -7,6 +8,7 @@ import { signOut } from "@/lib/actions/auth";
 
 type Props = {
   session: SessionState;
+  prompt?: { theme: string; body: string | null } | null;
 };
 
 const links = [
@@ -16,7 +18,7 @@ const links = [
   { href: "/about", label: "About" },
 ] as const;
 
-export function SiteHeader({ session }: Props) {
+export function SiteHeader({ session, prompt }: Props) {
   return (
     <header className="sticky top-0 z-40 border-b border-ink/8 bg-paper">
       <div className="flex items-center justify-between gap-4 px-4 py-2.5 sm:px-6 lg:px-8">
@@ -90,6 +92,7 @@ export function SiteHeader({ session }: Props) {
           look around; likes, comments, and uploads wait until then.
         </p>
       ) : null}
+      {prompt ? <PromptBanner theme={prompt.theme} body={prompt.body} /> : null}
     </header>
   );
 }

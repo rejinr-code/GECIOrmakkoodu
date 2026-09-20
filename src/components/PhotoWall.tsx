@@ -1,14 +1,25 @@
 import Link from "next/link";
-import { formatBatchLabel } from "@/config/site";
+import { formatBatchLabel, photoHref } from "@/config/site";
 import type { PhotoCard } from "@/lib/data";
 
-export function PhotoWall({ photos }: { photos: PhotoCard[] }) {
+export function PhotoWall({
+  photos,
+  hrefOptions,
+}: {
+  photos: PhotoCard[];
+  hrefOptions?: {
+    year?: number | null;
+    branch?: string | null;
+    event?: string | null;
+    view?: "timeline";
+  };
+}) {
   return (
     <div className="wall-settle columns-2 gap-3 sm:columns-3 xl:columns-4">
       {photos.map((photo) => (
         <Link
           key={photo.id}
-          href={`/photos/${photo.id}`}
+          href={photoHref(photo.id, hrefOptions)}
           className="photo-tile mb-3 block break-inside-avoid"
         >
           {photo.thumbUrl ? (

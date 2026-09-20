@@ -76,6 +76,7 @@ export async function listLegalDocuments() {
 export async function listApprovedPhotos(options: {
   batchYear?: number;
   branch?: string | null;
+  eventTag?: string | null;
   uploaderId?: string;
   page: number;
 }): Promise<{ photos: PhotoCard[]; total: number }> {
@@ -101,6 +102,9 @@ export async function listApprovedPhotos(options: {
   }
   if (options.branch) {
     query = query.eq("branch", options.branch);
+  }
+  if (options.eventTag) {
+    query = query.eq("event_tag", options.eventTag);
   }
   if (options.uploaderId) {
     query = query.eq("uploader_id", options.uploaderId).eq("anonymised", false);
@@ -350,6 +354,145 @@ export async function listEventTags() {
     .select("slug, label")
     .order("sort_order", { ascending: true });
   return data ?? [];
+}
+
+export async function getPhotoNeighbors(
+  photo: { id: string; created_at: string; batch_year: number },
+  options: {
+    timeline?: boolean;
+    branch?: string | null;
+    eventTag?: string | null;
+  },
+): Promise<{ previousId: string | null; nextId: string | null }> {
+  if (!isSupabaseConfigured()) return { previousId: null, nextId: null };
+  const supabase = await createServerSupabaseClient();
+
+  const apply = <T extends { eq: (c: string, v: string | number) => T }>(query: T) => {
+    let next = query;
+    if (!options.timeline) {
+      next = next.eq("batch_year", photo.batch_year);
+    }
+    if (options.branch) next = next.eq("branch", options.branch);
+    if (options.eventTag) next = next.eq("event_tag", options.eventTag);
+    return next;
+  };
+
+  const newerQuery = apply(
+    supabase
+      .from("photos")
+      .select("id")
+      .eq("status", "approved")
+      .is("deleted_at", null)
+      .gt("created_at", photo.created_at)
+      .order("created_at", { ascending: true })
+      .limit(1),
+  );
+  const olderQuery = apply(
+    supabase
+      .from("photos")
+      .select("id")
+      .eq("status", "approved")
+      .is("deleted_at", null)
+      .lt("created_at", photo.created_at)
+      .order("created_at", { ascending: false })
+      .limit(1),
+  );
+
+  const [{ data: newer }, { data: older }] = await Promise.all([
+    newerQuery.maybeSingle(),
+    olderQuery.maybeSingle(),
+  ]);
+
+  return {
+    previousId: newer?.id ?? null,
+    nextId: older?.id ?? null,
+  };
+}
+
+export async function getCurrentPrompt() {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase.rpc("current_prompt");
+  const row = Array.isArray(data) ? data[0] : data;
+  return row ?? null;
+}
+
+export async function listMonthlyPrompts() {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("monthly_prompts")
+    .select("id, theme, body, starts_at, ends_at")
+    .order("starts_at", { ascending: false })
+    .limit(12);
+  return data ?? [];
+}
+
+export async function hasOpenItemFlag(
+  userId: string,
+  targetType: "photo" | "article",
+  targetId: string,
+): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("reports")
+    .select("id")
+    .eq("reporter_id", userId)
+    .eq("target_type", targetType)
+    .eq("target_id", targetId)
+    .eq("status", "open")
+    .maybeSingle();
+  return Boolean(data);
+}
+
+export type OpenItemReport = {
+  id: string;
+  reason: string;
+  createdAt: string;
+  reporterName: string;
+  targetType: "photo" | "article";
+  targetId: string;
+  photoId: string | null;
+  articleSlug: string | null;
+};
+
+export async function listOpenItemReports(): Promise<OpenItemReport[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createServerSupabaseClient();
+  const { data: reports } = await supabase
+    .from("reports")
+    .select("id, reason, created_at, reporter_id, target_id, target_type")
+    .in("target_type", ["photo", "article"])
+    .eq("status", "open")
+    .order("created_at", { ascending: true });
+
+  const rows = reports ?? [];
+  if (rows.length === 0) return [];
+
+  const articleIds = rows.filter((row) => row.target_type === "article").map((row) => row.target_id);
+  const articleSlugs = new Map<string, string>();
+  if (articleIds.length > 0) {
+    const { data: articles } = await supabase.from("articles").select("id, slug").in("id", articleIds);
+    for (const article of articles ?? []) articleSlugs.set(article.id, article.slug);
+  }
+  const reporterIds = rows.map((row) => row.reporter_id).filter((id): id is string => Boolean(id));
+  const names = new Map<string, string>();
+  if (reporterIds.length > 0) {
+    const { data: reporters } = await supabase.from("profiles").select("id, name").in("id", reporterIds);
+    for (const profile of reporters ?? []) names.set(profile.id, profile.name);
+  }
+
+  return rows.map((row) => ({
+    id: row.id,
+    reason: row.reason,
+    createdAt: row.created_at,
+    reporterName: row.reporter_id ? (names.get(row.reporter_id) ?? "Member") : "Former member",
+    targetType: row.target_type as "photo" | "article",
+    targetId: row.target_id,
+    photoId: row.target_type === "photo" ? row.target_id : null,
+    articleSlug: row.target_type === "article" ? (articleSlugs.get(row.target_id) ?? null) : null,
+  }));
 }
 
 export type ModeratedPhotoCard = PhotoCard & {

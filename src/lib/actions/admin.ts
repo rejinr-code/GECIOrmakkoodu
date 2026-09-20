@@ -85,6 +85,7 @@ export async function saveSettings(formData: FormData): Promise<void> {
   const uploadLimit = Number(formData.get("upload_limit_per_day"));
   const commentLimit = Number(formData.get("comment_limit_per_day"));
   const featureComments = formData.get("feature_comments") === "on";
+  const featureMonthlyPrompt = formData.get("feature_monthly_prompt") === "on";
 
   const { error } = await supabase
     .from("settings")
@@ -94,6 +95,7 @@ export async function saveSettings(formData: FormData): Promise<void> {
       upload_limit_per_day: uploadLimit,
       comment_limit_per_day: commentLimit,
       feature_comments: featureComments,
+      feature_monthly_prompt: featureMonthlyPrompt,
       updated_by: session.userId,
     })
     .eq("id", 1);
@@ -186,6 +188,41 @@ export async function dismissCommentReport(formData: FormData): Promise<void> {
   revalidatePath("/admin/reports");
 }
 
+export async function removeReportedItem(formData: FormData): Promise<void> {
+  const { supabase, session } = await requireStaff();
+  const reportId = String(formData.get("report_id") ?? "");
+  const targetType = String(formData.get("target_type") ?? "");
+  const targetId = String(formData.get("target_id") ?? "");
+  if (!reportId || !targetId) throw new Error("Missing report.");
+  if (targetType !== "photo" && targetType !== "article") {
+    throw new Error("Choose a photograph or letter.");
+  }
+
+  if (targetType === "photo") {
+    const { error } = await supabase.from("photos").update({ status: "removed" }).eq("id", targetId);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/photos/${targetId}`);
+    revalidatePath("/");
+  } else {
+    const { error } = await supabase.from("articles").update({ status: "removed" }).eq("id", targetId);
+    if (error) throw new Error(error.message);
+    revalidatePath("/articles");
+  }
+
+  const { error: reportError } = await supabase
+    .from("reports")
+    .update({
+      status: "actioned",
+      handled_by: session.userId,
+      notes: "Item removed",
+    })
+    .eq("id", reportId)
+    .eq("status", "open");
+  if (reportError) throw new Error(reportError.message);
+
+  revalidatePath("/admin/reports");
+}
+
 export async function moderatePhoto(formData: FormData): Promise<void> {
   const { supabase } = await requireStaff();
   const id = String(formData.get("id") ?? "");
@@ -236,4 +273,25 @@ export async function moderateArticle(formData: FormData): Promise<void> {
   revalidatePath("/articles");
   revalidatePath("/");
   revalidatePath("/account");
+}
+
+export async function saveMonthlyPrompt(formData: FormData): Promise<void> {
+  const { supabase, session } = await requireAdmin();
+  const theme = String(formData.get("theme") ?? "").trim();
+  const body = String(formData.get("body") ?? "").trim();
+  const startsAt = String(formData.get("starts_at") ?? "").trim();
+  const endsAt = String(formData.get("ends_at") ?? "").trim();
+  if (!theme) throw new Error("Give the month a theme.");
+  if (!startsAt) throw new Error("Choose when this prompt starts.");
+
+  const { error } = await supabase.from("monthly_prompts").insert({
+    theme,
+    body: body || null,
+    starts_at: new Date(startsAt).toISOString(),
+    ends_at: endsAt ? new Date(endsAt).toISOString() : null,
+    created_by: session.userId,
+  });
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/prompts");
+  revalidatePath("/", "layout");
 }

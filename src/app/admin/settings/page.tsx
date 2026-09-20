@@ -66,6 +66,15 @@ export default async function SettingsPage() {
           />
           <span className="text-caption">Allow likes and comments on photographs and letters</span>
         </label>
+        <label className="flex min-h-11 items-center gap-3">
+          <input
+            name="feature_monthly_prompt"
+            type="checkbox"
+            defaultChecked={settings?.feature_monthly_prompt ?? false}
+            className="size-4"
+          />
+          <span className="text-caption">Show the monthly prompt banner</span>
+        </label>
         <button type="submit" className="btn btn-green">
           Save settings
         </button>

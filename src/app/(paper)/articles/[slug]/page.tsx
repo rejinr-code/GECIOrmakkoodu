@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ContributorLink } from "@/components/ContributorLink";
+import { FlagItemForm } from "@/components/FlagItemForm";
 import { MarkdownBody, PaperPage } from "@/components/MarkdownBody";
 import { PhotoEngagement } from "@/components/PhotoEngagement";
 import { formatBatchLabel, siteConfig } from "@/config/site";
@@ -11,6 +12,7 @@ import {
   getPublicProfile,
   getReactionState,
   getSettings,
+  hasOpenItemFlag,
   listComments,
   listMyOpenCommentFlags,
 } from "@/lib/data";
@@ -66,6 +68,10 @@ export default async function ArticlePage({ params }: Props) {
           comments.map((comment) => comment.id),
         )
       : new Set<string>();
+  const alreadyFlagged =
+    Boolean(session.userId) && isPublic
+      ? await hasOpenItemFlag(session.userId as string, "article", article.id)
+      : false;
   const author =
     !article.anonymised && article.author_id
       ? await getPublicProfile(article.author_id)
@@ -109,19 +115,34 @@ export default async function ArticlePage({ params }: Props) {
           </Link>
         </p>
       ) : null}
-      {email && isPublic ? (
-        <p className="mt-12">
-          <a
-            href={removalMailto({
-              contactEmail: email,
-              itemType: "article",
-              itemId: article.id,
-              itemUrl,
-            })}
-            className="inline-flex min-h-11 items-center underline underline-offset-4"
-          >
-            Request removal
-          </a>
+      {isPublic ? (
+        <p className="mt-12 flex flex-wrap items-center gap-x-6 gap-y-2 text-caption">
+          {email ? (
+            <a
+              href={removalMailto({
+                contactEmail: email,
+                itemType: "article",
+                itemId: article.id,
+                itemUrl,
+              })}
+              className="inline-flex min-h-11 items-center underline underline-offset-4"
+            >
+              Request removal
+            </a>
+          ) : null}
+          {session.userId && !isOwner && !alreadyFlagged ? (
+            <FlagItemForm
+              parentType="article"
+              parentId={article.id}
+              next={`/articles/${article.slug}`}
+            />
+          ) : null}
+          {alreadyFlagged ? <span className="text-muted">Flagged for review</span> : null}
+          {!session.userId ? (
+            <Link href="/sign-in" className="underline underline-offset-4">
+              Sign in to flag
+            </Link>
+          ) : null}
         </p>
       ) : null}
       {commentsEnabled ? (

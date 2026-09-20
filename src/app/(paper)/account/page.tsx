@@ -98,7 +98,9 @@ export default async function AccountPage() {
               <li key={article.id} className="text-caption">
                 <Link
                   href={
-                    article.status === "draft" || article.status === "pending"
+                    article.status === "draft" ||
+                    article.status === "pending" ||
+                    article.status === "rejected"
                       ? `/write/${article.id}`
                       : `/articles/${article.slug}`
                   }

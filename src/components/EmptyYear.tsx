@@ -5,13 +5,17 @@ import { isVerified, type SessionState } from "@/lib/session";
 export function EmptyYear({
   year,
   branch,
+  eventLabel,
+  timeline = false,
   session,
 }: {
-  year: number;
+  year?: number | null;
   branch?: string | null;
+  eventLabel?: string;
+  timeline?: boolean;
   session: SessionState;
 }) {
-  const label = formatBatchLabel(year);
+  const label = year ? formatBatchLabel(year) : "archive";
   const verified = isVerified(session.profile);
 
   return (
@@ -21,10 +25,13 @@ export function EmptyYear({
         <div className="print-mat h-48 sm:h-56" />
       </div>
       <p className="text-lead text-ink">
-        {branch
-          ? `The ${label} ${branch} pages are empty.`
-          : `The ${label} album is empty.`}{" "}
-        Be the first to put a campus photograph here.
+        {eventLabel
+          ? `No ${eventLabel.toLowerCase()} photographs here yet.`
+          : timeline
+            ? "The archive is empty. Be the first to put a campus photograph here."
+            : branch
+              ? `The ${label} ${branch} pages are empty. Be the first to put a campus photograph here.`
+              : `The ${label} album is empty. Be the first to put a campus photograph here.`}
       </p>
       <p className="mt-3 max-w-md text-muted">
         Anyone can look. Adding a picture needs a verified GECIAN account — a
@@ -32,7 +39,7 @@ export function EmptyYear({
       </p>
       {verified ? (
         <Link
-          href={`/contribute?year=${year}${branch ? `&branch=${branch}` : ""}`}
+          href={`/contribute${year ? `?year=${year}${branch ? `&branch=${branch}` : ""}` : ""}`}
           className="btn btn-green mt-7"
         >
           Add a photograph

@@ -112,16 +112,57 @@ export function parseBranch(value: string | undefined, admissionYear: number): B
   return value as BranchId;
 }
 
+export function isTimelineView(value: string | undefined): boolean {
+  return value === "timeline";
+}
+
+export function parseEventSlug(
+  value: string | undefined,
+  tags: Array<{ slug: string }>,
+): string | null {
+  if (!value) return null;
+  return tags.some((tag) => tag.slug === value) ? value : null;
+}
+
 export function albumHref(options: {
-  year: number;
+  year?: number | null;
   branch?: string | null;
+  event?: string | null;
   page?: number;
+  view?: "timeline";
 }): string {
   const params = new URLSearchParams();
-  params.set("year", String(options.year));
-  if (options.branch) params.set("branch", options.branch);
+  if (options.view === "timeline") {
+    params.set("view", "timeline");
+  } else if (options.year) {
+    params.set("year", String(options.year));
+    if (options.branch) params.set("branch", options.branch);
+  }
+  if (options.event) params.set("event", options.event);
   if (options.page && options.page > 1) params.set("page", String(options.page));
-  return `/?${params.toString()}`;
+  const query = params.toString();
+  return query ? `/?${query}` : "/";
+}
+
+export function photoHref(
+  id: string,
+  options?: {
+    year?: number | null;
+    branch?: string | null;
+    event?: string | null;
+    view?: "timeline";
+  },
+): string {
+  const params = new URLSearchParams();
+  if (options?.view === "timeline") {
+    params.set("view", "timeline");
+  } else if (options?.year) {
+    params.set("year", String(options.year));
+    if (options.branch) params.set("branch", options.branch);
+  }
+  if (options?.event) params.set("event", options.event);
+  const query = params.toString();
+  return query ? `/photos/${id}?${query}` : `/photos/${id}`;
 }
 
 export function allBatchYears(now = new Date()): number[] {
