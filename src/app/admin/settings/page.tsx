@@ -57,6 +57,15 @@ export default async function SettingsPage() {
             className="field-ink mt-1"
           />
         </label>
+        <label className="flex min-h-11 items-center gap-3">
+          <input
+            name="feature_comments"
+            type="checkbox"
+            defaultChecked={settings?.feature_comments ?? true}
+            className="size-4"
+          />
+          <span className="text-caption">Allow likes and comments on photographs</span>
+        </label>
         <button type="submit" className="btn btn-green">
           Save settings
         </button>

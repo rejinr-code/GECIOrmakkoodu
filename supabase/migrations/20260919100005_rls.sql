@@ -23,7 +23,7 @@ select
   avatar_url,
   bio,
   current_city,
-  current_role,
+  "current_role",
   created_at
 from public.profiles
 where status = 'verified'

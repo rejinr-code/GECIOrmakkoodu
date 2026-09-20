@@ -79,7 +79,7 @@ export function SiteHeader({ session }: Props) {
       {session.profile && session.profile.status === "pending" ? (
         <p className="border-t border-gold/40 bg-gold/10 px-4 py-3 text-caption text-ink sm:px-6">
           A volunteer still needs to verify you against the alumni list. You can
-          look around; uploading waits until then.
+          look around; likes, comments, and uploads wait until then.
         </p>
       ) : null}
     </header>

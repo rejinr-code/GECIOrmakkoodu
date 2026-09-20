@@ -224,3 +224,178 @@ export async function listAlumniRegister() {
     .order("name", { ascending: true });
   return data ?? [];
 }
+
+export type PhotoComment = {
+  id: string;
+  body: string;
+  createdAt: string;
+  authorId: string | null;
+  authorName: string;
+};
+
+export type PhotoReactionState = {
+  count: number;
+  liked: boolean;
+};
+
+export type OpenCommentReport = {
+  id: string;
+  reason: string;
+  createdAt: string;
+  reporterName: string;
+  commentId: string;
+  commentBody: string;
+  photoId: string | null;
+  commentStatus: string | null;
+};
+
+async function namesForIds(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>,
+  ids: string[],
+): Promise<Map<string, string>> {
+  const unique = [...new Set(ids.filter(Boolean))];
+  const names = new Map<string, string>();
+  if (unique.length === 0) return names;
+  const { data } = await supabase
+    .from("public_profiles")
+    .select("id, name")
+    .in("id", unique);
+  for (const profile of data ?? []) {
+    names.set(profile.id, profile.name);
+  }
+  return names;
+}
+
+export async function listPhotoComments(photoId: string): Promise<PhotoComment[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("comments")
+    .select("id, body, created_at, author_id, anonymised")
+    .eq("parent_type", "photo")
+    .eq("parent_id", photoId)
+    .eq("status", "visible")
+    .is("deleted_at", null)
+    .order("created_at", { ascending: true })
+    .limit(100);
+
+  const rows = data ?? [];
+  const names = await namesForIds(
+    supabase,
+    rows
+      .filter((row) => !row.anonymised && row.author_id)
+      .map((row) => row.author_id as string),
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    body: row.body,
+    createdAt: row.created_at,
+    authorId: row.author_id,
+    authorName:
+      row.anonymised || !row.author_id
+        ? "Former member"
+        : (names.get(row.author_id) ?? "GECIAN"),
+  }));
+}
+
+export async function getPhotoReactionState(
+  photoId: string,
+  userId: string | null,
+): Promise<PhotoReactionState> {
+  if (!isSupabaseConfigured()) return { count: 0, liked: false };
+  const supabase = await createServerSupabaseClient();
+  const { count } = await supabase
+    .from("reactions")
+    .select("id", { count: "exact", head: true })
+    .eq("parent_type", "photo")
+    .eq("parent_id", photoId)
+    .is("deleted_at", null);
+
+  let liked = false;
+  if (userId) {
+    const { data } = await supabase
+      .from("reactions")
+      .select("id")
+      .eq("parent_type", "photo")
+      .eq("parent_id", photoId)
+      .eq("user_id", userId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    liked = Boolean(data);
+  }
+
+  return { count: count ?? 0, liked };
+}
+
+export async function listMyOpenCommentFlags(
+  userId: string,
+  commentIds: string[],
+): Promise<Set<string>> {
+  const flagged = new Set<string>();
+  if (!isSupabaseConfigured() || commentIds.length === 0) return flagged;
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("reports")
+    .select("target_id")
+    .eq("reporter_id", userId)
+    .eq("target_type", "comment")
+    .eq("status", "open")
+    .in("target_id", commentIds);
+  for (const row of data ?? []) {
+    flagged.add(row.target_id);
+  }
+  return flagged;
+}
+
+export async function listOpenCommentReports(): Promise<OpenCommentReport[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createServerSupabaseClient();
+  const { data: reports } = await supabase
+    .from("reports")
+    .select("id, reason, created_at, reporter_id, target_id")
+    .eq("target_type", "comment")
+    .eq("status", "open")
+    .order("created_at", { ascending: true });
+
+  const rows = reports ?? [];
+  if (rows.length === 0) return [];
+
+  const commentIds = rows.map((row) => row.target_id);
+  const { data: comments } = await supabase
+    .from("comments")
+    .select("id, body, parent_id, parent_type, status")
+    .in("id", commentIds);
+
+  const commentsById = new Map((comments ?? []).map((row) => [row.id, row]));
+  const reporterIds = rows
+    .map((row) => row.reporter_id)
+    .filter((id): id is string => Boolean(id));
+  const names = new Map<string, string>();
+  if (reporterIds.length > 0) {
+    const { data: reporters } = await supabase
+      .from("profiles")
+      .select("id, name")
+      .in("id", reporterIds);
+    for (const profile of reporters ?? []) {
+      names.set(profile.id, profile.name);
+    }
+  }
+
+  return rows.map((row) => {
+    const comment = commentsById.get(row.target_id);
+    return {
+      id: row.id,
+      reason: row.reason,
+      createdAt: row.created_at,
+      reporterName: row.reporter_id
+        ? (names.get(row.reporter_id) ?? "Member")
+        : "Former member",
+      commentId: row.target_id,
+      commentBody: comment?.body ?? "This note is no longer visible.",
+      photoId:
+        comment?.parent_type === "photo" ? comment.parent_id : null,
+      commentStatus: comment?.status ?? null,
+    };
+  });
+}

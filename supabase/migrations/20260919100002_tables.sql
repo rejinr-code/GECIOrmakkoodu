@@ -15,7 +15,7 @@ create table public.profiles (
   status public.user_status not null default 'pending',
   bio text,
   current_city text,
-  current_role text,
+  "current_role" text,
   consent_accepted_at timestamptz,
   consent_version text,
   directory_opt_in boolean not null default false,

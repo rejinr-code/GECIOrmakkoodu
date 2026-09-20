@@ -32,7 +32,7 @@ insert into public.settings (
   '1.0',
   true,
   true,
-  false,
+  true,
   false,
   false,
   false,

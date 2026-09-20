@@ -50,30 +50,3 @@ create index alumni_register_lookup_idx
 
 create index monthly_prompts_window_idx
   on public.monthly_prompts (starts_at desc, ends_at);
-
--- Search covers captions, tagged names, and article text (Phase 2/3).
-alter table public.photos
-  add column search_vector tsvector generated always as (
-    setweight(to_tsvector('simple', coalesce(caption, '')), 'A')
-    || setweight(
-      to_tsvector('simple', coalesce(array_to_string(people_tagged, ' '), '')),
-      'B'
-    )
-  ) stored;
-
-create index photos_search_idx on public.photos using gin (search_vector);
-
-alter table public.articles
-  add column search_vector tsvector generated always as (
-    setweight(to_tsvector('simple', coalesce(title, '')), 'A')
-    || setweight(to_tsvector('simple', coalesce(body, '')), 'B')
-  ) stored;
-
-create index articles_search_idx on public.articles using gin (search_vector);
-
-alter table public.profiles
-  add column search_vector tsvector generated always as (
-    setweight(to_tsvector('simple', coalesce(name, '')), 'A')
-  ) stored;
-
-create index profiles_search_idx on public.profiles using gin (search_vector);

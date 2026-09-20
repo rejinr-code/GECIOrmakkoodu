@@ -19,6 +19,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           <Link href="/admin" className="inline-flex min-h-11 items-center text-ink">
             Verification
           </Link>
+          <Link href="/admin/reports" className="inline-flex min-h-11 items-center">
+            Flags
+          </Link>
           {admin ? (
             <>
               <Link href="/admin/register" className="inline-flex min-h-11 items-center">

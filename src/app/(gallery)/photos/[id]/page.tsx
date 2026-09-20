@@ -1,11 +1,20 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { PhotoEngagement } from "@/components/PhotoEngagement";
 import { siteConfig } from "@/config/site";
 import { formatBatchLabel } from "@/config/site";
-import { contactEmail, getPhoto, getSettings } from "@/lib/data";
+import {
+  contactEmail,
+  getPhoto,
+  getPhotoReactionState,
+  getSettings,
+  listMyOpenCommentFlags,
+  listPhotoComments,
+} from "@/lib/data";
 import { imageStore } from "@/lib/imageStore.server";
 import { removalMailto } from "@/lib/mailto";
 import { isSupabaseConfigured, publicEnv } from "@/lib/env";
+import { getSession } from "@/lib/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 
 type Props = { params: Promise<{ id: string }> };
@@ -46,6 +55,19 @@ export default async function PhotoPage({ params }: Props) {
   const email = contactEmail(settings);
   const siteUrl = publicEnv.siteUrl || "";
   const itemUrl = `${siteUrl}/photos/${photo.id}`;
+  const session = await getSession();
+  const commentsEnabled = settings?.feature_comments !== false;
+  const comments = commentsEnabled ? await listPhotoComments(photo.id) : [];
+  const reaction = commentsEnabled
+    ? await getPhotoReactionState(photo.id, session.userId)
+    : { count: 0, liked: false };
+  const flaggedIds =
+    commentsEnabled && session.userId
+      ? await listMyOpenCommentFlags(
+          session.userId,
+          comments.map((comment) => comment.id),
+        )
+      : new Set<string>();
 
   let imageUrl: string | null = null;
   try {
@@ -110,6 +132,15 @@ export default async function PhotoPage({ params }: Props) {
               </a>
             ) : null}
           </p>
+          {commentsEnabled ? (
+            <PhotoEngagement
+              photoId={photo.id}
+              comments={comments}
+              reaction={reaction}
+              flaggedIds={flaggedIds}
+              session={session}
+            />
+          ) : null}
         </div>
       </div>
     </main>
