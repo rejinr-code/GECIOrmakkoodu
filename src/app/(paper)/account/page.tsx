@@ -2,7 +2,7 @@ import { AccountControls } from "@/components/AccountControls";
 import { PaperPage } from "@/components/MarkdownBody";
 import { PublicProfileForm } from "@/components/PublicProfileForm";
 import { branchLabel, formatBatchLabel } from "@/config/site";
-import { listMyArticles, listMyPhotos } from "@/lib/data";
+import { listMyArticles, listMyOffers, listMyPhotos } from "@/lib/data";
 import { getSession, isVerified } from "@/lib/session";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -16,6 +16,7 @@ export default async function AccountPage() {
   const profile = session.profile;
   const mine = session.userId ? await listMyPhotos(session.userId) : [];
   const letters = session.userId ? await listMyArticles(session.userId) : [];
+  const offers = session.userId ? await listMyOffers(session.userId) : [];
 
   return (
     <PaperPage>
@@ -51,6 +52,9 @@ export default async function AccountPage() {
             <Link href="/write" className="btn btn-quiet">
               Write a letter
             </Link>
+            <Link href="/offers/new" className="btn btn-quiet">
+              Post an offer
+            </Link>
             <Link href={`/people/${session.userId}`} className="btn btn-quiet">
               Public page
             </Link>
@@ -65,6 +69,10 @@ export default async function AccountPage() {
               defaultBio={profile?.bio ?? ""}
               defaultCity={profile?.current_city ?? ""}
               defaultRole={profile?.current_role ?? ""}
+              defaultDirectoryOptIn={profile?.directory_opt_in ?? false}
+              defaultShowCity={profile?.directory_show_city ?? false}
+              defaultShowRole={profile?.directory_show_role ?? false}
+              defaultShowBio={profile?.directory_show_bio ?? false}
             />
           </section>
         </>
@@ -111,6 +119,27 @@ export default async function AccountPage() {
                 <span className="text-muted"> · {article.status}</span>
                 {article.status === "rejected" && article.rejectionReason ? (
                   <span className="block text-muted">{article.rejectionReason}</span>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+      {offers.length > 0 ? (
+        <section className="mt-12">
+          <h2 className="text-h3 font-medium tracking-wordmark">Your offers</h2>
+          <ul className="mt-4 space-y-3">
+            {offers.map((offer) => (
+              <li key={offer.id} className="text-caption">
+                <Link
+                  href={`/offers/${offer.id}`}
+                  className="text-ink underline-offset-4 hover:underline"
+                >
+                  {offer.title}
+                </Link>
+                <span className="text-muted"> · {offer.status}</span>
+                {offer.status === "rejected" && offer.rejectionReason ? (
+                  <span className="block text-muted">{offer.rejectionReason}</span>
                 ) : null}
               </li>
             ))}

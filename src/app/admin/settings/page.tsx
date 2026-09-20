@@ -75,6 +75,24 @@ export default async function SettingsPage() {
           />
           <span className="text-caption">Show the monthly prompt banner</span>
         </label>
+        <label className="flex min-h-11 items-center gap-3">
+          <input
+            name="feature_directory"
+            type="checkbox"
+            defaultChecked={settings?.feature_directory ?? false}
+            className="size-4"
+          />
+          <span className="text-caption">Show the alumni directory</span>
+        </label>
+        <label className="flex min-h-11 items-center gap-3">
+          <input
+            name="feature_mentoring"
+            type="checkbox"
+            defaultChecked={settings?.feature_mentoring ?? false}
+            className="size-4"
+          />
+          <span className="text-caption">Show mentoring and internship offers</span>
+        </label>
         <button type="submit" className="btn btn-green">
           Save settings
         </button>

@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -103,6 +104,10 @@ export async function savePublicDetails(formData: FormData): Promise<PublicDetai
       bio: bio || null,
       current_city: city || null,
       current_role: role || null,
+      directory_opt_in: formData.get("directory_opt_in") === "on",
+      directory_show_city: formData.get("directory_show_city") === "on",
+      directory_show_role: formData.get("directory_show_role") === "on",
+      directory_show_bio: formData.get("directory_show_bio") === "on",
     })
     .eq("id", session.userId);
 
@@ -110,6 +115,9 @@ export async function savePublicDetails(formData: FormData): Promise<PublicDetai
     return { error: error.message };
   }
 
+  revalidatePath("/people");
+  revalidatePath(`/people/${session.userId}`);
+  revalidatePath("/account");
   return { id: session.userId };
 }
 

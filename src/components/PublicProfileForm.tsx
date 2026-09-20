@@ -10,11 +10,19 @@ export function PublicProfileForm({
   defaultBio,
   defaultCity,
   defaultRole,
+  defaultDirectoryOptIn,
+  defaultShowCity,
+  defaultShowRole,
+  defaultShowBio,
 }: {
   defaultName: string;
   defaultBio: string;
   defaultCity: string;
   defaultRole: string;
+  defaultDirectoryOptIn: boolean;
+  defaultShowCity: boolean;
+  defaultShowRole: boolean;
+  defaultShowBio: boolean;
 }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +89,52 @@ export function PublicProfileForm({
           className="field mt-1 min-h-32 py-3"
         />
       </label>
+      <fieldset className="space-y-3 border-t border-ink/8 pt-5">
+        <legend className="text-caption">Who can see this</legend>
+        <p className="text-caption text-muted">
+          Name, batch, and branch already appear when someone opens your page from
+          a photograph. The rest stays off until you tick it. Phone and email never
+          appear here.
+        </p>
+        <label className="flex min-h-11 items-start gap-3">
+          <input
+            name="directory_opt_in"
+            type="checkbox"
+            defaultChecked={defaultDirectoryOptIn}
+            className="mt-1 size-4"
+          />
+          <span className="text-caption">
+            List me in the alumni directory, searchable by name, batch, and branch
+          </span>
+        </label>
+        <label className="flex min-h-11 items-start gap-3">
+          <input
+            name="directory_show_city"
+            type="checkbox"
+            defaultChecked={defaultShowCity}
+            className="mt-1 size-4"
+          />
+          <span className="text-caption">Show my city</span>
+        </label>
+        <label className="flex min-h-11 items-start gap-3">
+          <input
+            name="directory_show_role"
+            type="checkbox"
+            defaultChecked={defaultShowRole}
+            className="mt-1 size-4"
+          />
+          <span className="text-caption">Show what I do now</span>
+        </label>
+        <label className="flex min-h-11 items-start gap-3">
+          <input
+            name="directory_show_bio"
+            type="checkbox"
+            defaultChecked={defaultShowBio}
+            className="mt-1 size-4"
+          />
+          <span className="text-caption">Show my note</span>
+        </label>
+      </fieldset>
       {error ? <p className="text-caption text-green">{error}</p> : null}
       <button type="submit" className="btn btn-green" disabled={busy}>
         {busy ? "Saving…" : "Save public details"}

@@ -1,7 +1,9 @@
-import { siteConfig } from "@/config/site";
+import { siteConfig, type OfferKind } from "@/config/site";
 import { publicEnv, isSupabaseConfigured } from "@/lib/env";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { imageStore } from "@/lib/imageStore.server";
+import { DIRECTORY_PAGE_SIZE } from "@/lib/profiles";
+import { OFFERS_PAGE_SIZE } from "@/lib/offers";
 import type { Database } from "@/types/database";
 
 export const WALL_PAGE_SIZE = 24;
@@ -46,10 +48,66 @@ export async function getPublicProfile(id: string) {
   const supabase = await createServerSupabaseClient();
   const { data } = await supabase
     .from("public_profiles")
-    .select("id, name, batch_year, branch, bio, current_city, current_role")
+    .select(
+      "id, name, batch_year, branch, bio, current_city, current_role, directory_opt_in, directory_show_city, directory_show_role, directory_show_bio",
+    )
     .eq("id", id)
     .maybeSingle();
   return data;
+}
+
+export type DirectoryPerson = {
+  id: string;
+  name: string;
+  batchYear: number | null;
+  branch: string | null;
+  city: string | null;
+  role: string | null;
+  bio: string | null;
+};
+
+export async function listDirectory(options: {
+  q?: string;
+  year?: number | null;
+  branch?: string | null;
+  page: number;
+}): Promise<{ people: DirectoryPerson[]; total: number }> {
+  if (!isSupabaseConfigured()) return { people: [], total: 0 };
+
+  const supabase = await createServerSupabaseClient();
+  const from = (options.page - 1) * DIRECTORY_PAGE_SIZE;
+  const to = from + DIRECTORY_PAGE_SIZE - 1;
+
+  let query = supabase
+    .from("public_profiles")
+    .select("id, name, batch_year, branch, bio, current_city, current_role", { count: "exact" })
+    .eq("directory_opt_in", true)
+    .order("name", { ascending: true })
+    .range(from, to);
+
+  if (options.q) {
+    query = query.ilike("name", `%${options.q}%`);
+  }
+  if (options.year) {
+    query = query.eq("batch_year", options.year);
+  }
+  if (options.branch) {
+    query = query.eq("branch", options.branch);
+  }
+
+  const { data, count } = await query;
+  return {
+    people: (data ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      batchYear: row.batch_year,
+      branch: row.branch,
+      city: row.current_city,
+      role: row.current_role,
+      bio: row.bio,
+    })),
+    total: count ?? 0,
+  };
 }
 
 export async function getLegalDocument(slug: string) {
@@ -831,4 +889,197 @@ export async function listOpenCommentReports(): Promise<OpenCommentReport[]> {
       commentStatus: comment?.status ?? null,
     };
   });
+}
+
+export type OfferCard = {
+  id: string;
+  kind: OfferKind;
+  title: string;
+  body: string;
+  city: string | null;
+  status: Database["public"]["Tables"]["mentoring_offers"]["Row"]["status"];
+  rejectionReason: string | null;
+  authorId: string | null;
+  authorName: string;
+  createdAt: string;
+};
+
+async function mapOffers(
+  rows: Array<{
+    id: string;
+    kind: OfferKind;
+    title: string;
+    body: string;
+    city: string | null;
+    status: OfferCard["status"];
+    rejection_reason: string | null;
+    author_id: string | null;
+    created_at: string;
+    anonymised?: boolean;
+  }>,
+  nameSource: "public" | "profiles",
+): Promise<OfferCard[]> {
+  const ids = [
+    ...new Set(
+      rows
+        .filter((row) => !row.anonymised && row.author_id)
+        .map((row) => row.author_id as string),
+    ),
+  ];
+  const names = new Map<string, string>();
+  if (ids.length > 0) {
+    const supabase = await createServerSupabaseClient();
+    if (nameSource === "profiles") {
+      const { data } = await supabase.from("profiles").select("id, name").in("id", ids);
+      for (const profile of data ?? []) names.set(profile.id, profile.name);
+    } else {
+      const { data } = await supabase.from("public_profiles").select("id, name").in("id", ids);
+      for (const profile of data ?? []) names.set(profile.id, profile.name);
+    }
+  }
+
+  return rows.map((row) => ({
+    id: row.id,
+    kind: row.kind,
+    title: row.title,
+    body: row.body,
+    city: row.city,
+    status: row.status,
+    rejectionReason: row.rejection_reason,
+    authorId: row.anonymised ? null : row.author_id,
+    authorName: row.anonymised
+      ? "Former member"
+      : row.author_id
+        ? (names.get(row.author_id) ?? "GECIAN")
+        : "Former member",
+    createdAt: row.created_at,
+  }));
+}
+
+const OFFER_COLUMNS =
+  "id, kind, title, body, city, status, rejection_reason, author_id, anonymised, created_at";
+
+export async function listApprovedOffers(options: {
+  kind?: OfferKind | null;
+  page: number;
+}): Promise<{ offers: OfferCard[]; total: number }> {
+  if (!isSupabaseConfigured()) return { offers: [], total: 0 };
+
+  const supabase = await createServerSupabaseClient();
+  const from = (options.page - 1) * OFFERS_PAGE_SIZE;
+  const to = from + OFFERS_PAGE_SIZE - 1;
+
+  let query = supabase
+    .from("mentoring_offers")
+    .select(OFFER_COLUMNS, { count: "exact" })
+    .eq("status", "approved")
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .range(from, to);
+
+  if (options.kind) {
+    query = query.eq("kind", options.kind);
+  }
+
+  const { data, count } = await query;
+  return {
+    offers: await mapOffers(data ?? [], "public"),
+    total: count ?? 0,
+  };
+}
+
+export async function getVisibleOffer(id: string): Promise<OfferCard | null> {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("mentoring_offers")
+    .select(OFFER_COLUMNS)
+    .eq("id", id)
+    .maybeSingle();
+  if (!data) return null;
+  const [offer] = await mapOffers([data], "public");
+  return offer ?? null;
+}
+
+export async function listPendingOffers(): Promise<OfferCard[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("mentoring_offers")
+    .select(OFFER_COLUMNS)
+    .eq("status", "pending")
+    .is("deleted_at", null)
+    .order("created_at", { ascending: true });
+  return mapOffers(data ?? [], "profiles");
+}
+
+export async function listMyOffers(userId: string): Promise<OfferCard[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("mentoring_offers")
+    .select(OFFER_COLUMNS)
+    .eq("author_id", userId)
+    .is("deleted_at", null)
+    .order("created_at", { ascending: false })
+    .limit(40);
+  return mapOffers(data ?? [], "public");
+}
+
+export type InterestRow = {
+  memberId: string;
+  name: string;
+  batchYear: number | null;
+  branch: string | null;
+  note: string | null;
+  createdAt: string;
+};
+
+export async function listOfferInterest(offerId: string): Promise<InterestRow[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("mentoring_interest")
+    .select("member_id, note, created_at")
+    .eq("offer_id", offerId)
+    .order("created_at", { ascending: true });
+  const rows = data ?? [];
+  const ids = rows.map((row) => row.member_id);
+  const names = new Map<string, { name: string; batchYear: number | null; branch: string | null }>();
+  if (ids.length > 0) {
+    const { data: profiles } = await supabase
+      .from("public_profiles")
+      .select("id, name, batch_year, branch")
+      .in("id", ids);
+    for (const profile of profiles ?? []) {
+      names.set(profile.id, {
+        name: profile.name,
+        batchYear: profile.batch_year,
+        branch: profile.branch,
+      });
+    }
+  }
+  return rows.map((row) => {
+    const profile = names.get(row.member_id);
+    return {
+      memberId: row.member_id,
+      name: profile?.name ?? "GECIAN",
+      batchYear: profile?.batchYear ?? null,
+      branch: profile?.branch ?? null,
+      note: row.note,
+      createdAt: row.created_at,
+    };
+  });
+}
+
+export async function hasExpressedInterest(offerId: string, userId: string): Promise<boolean> {
+  if (!isSupabaseConfigured()) return false;
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("mentoring_interest")
+    .select("offer_id")
+    .eq("offer_id", offerId)
+    .eq("member_id", userId)
+    .maybeSingle();
+  return Boolean(data);
 }

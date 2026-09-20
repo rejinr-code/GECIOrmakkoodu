@@ -13,7 +13,7 @@ Looking does not require an account. Contributing does. New accounts stay pendin
 
 Batches are labelled as admission to graduation (2000–2004, 2007–2011, and so on). Mechanical Engineering began with 2013–2017. Robotics and Artificial Intelligence began with 2025–2029.
 
-There is no payment collection, no face recognition, and no public listing of phone numbers or email addresses. WhatsApp batch links are visible only after verification.
+There is no payment collection, no face recognition, and no public listing of phone numbers or email addresses. WhatsApp batch links are visible only after verification. The people directory is opt-in, field by field. Mentoring offers never carry an email — interested alumni are shown as public names.
 `;
 
   return (

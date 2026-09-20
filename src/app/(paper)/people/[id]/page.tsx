@@ -51,6 +51,9 @@ export default async function PersonPage({ params }: Props) {
       </p>
       {place ? <p className="mt-2 text-caption text-muted">{place}</p> : null}
       {profile.bio ? <p className="mt-6 whitespace-pre-wrap">{profile.bio}</p> : null}
+      {profile.directory_opt_in ? (
+        <p className="mt-4 text-caption text-muted">Listed in the alumni directory.</p>
+      ) : null}
       {isOwn ? (
         <p className="mt-6">
           <Link href="/account" className="text-caption underline underline-offset-4">

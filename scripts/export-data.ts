@@ -20,6 +20,8 @@ const TABLES = [
   "reactions",
   "reports",
   "monthly_prompts",
+  "mentoring_offers",
+  "mentoring_interest",
   "audit_log",
 ] as const;
 

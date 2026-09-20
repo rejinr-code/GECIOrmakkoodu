@@ -9,16 +9,18 @@ import { signOut } from "@/lib/actions/auth";
 type Props = {
   session: SessionState;
   prompt?: { theme: string; body: string | null } | null;
+  features?: { directory?: boolean; mentoring?: boolean };
 };
 
-const links = [
-  { href: "/", label: "Archive" },
-  { href: "/articles", label: "Letters" },
-  { href: "/batches", label: "Batches" },
-  { href: "/about", label: "About" },
-] as const;
-
-export function SiteHeader({ session, prompt }: Props) {
+export function SiteHeader({ session, prompt, features }: Props) {
+  const links = [
+    { href: "/", label: "Archive" },
+    { href: "/articles", label: "Letters" },
+    ...(features?.directory ? [{ href: "/people", label: "People" }] : []),
+    ...(features?.mentoring ? [{ href: "/offers", label: "Offers" }] : []),
+    { href: "/batches", label: "Batches" },
+    { href: "/about", label: "About" },
+  ];
   return (
     <header className="sticky top-0 z-40 border-b border-ink/8 bg-paper">
       <div className="flex items-center justify-between gap-4 px-4 py-2.5 sm:px-6 lg:px-8">

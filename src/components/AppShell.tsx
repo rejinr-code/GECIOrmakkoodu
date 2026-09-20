@@ -18,7 +18,14 @@ export async function AppShell({
 
   return (
     <>
-      <SiteHeader session={session} prompt={prompt} />
+      <SiteHeader
+        session={session}
+        prompt={prompt}
+        features={{
+          directory: settings?.feature_directory === true,
+          mentoring: settings?.feature_mentoring === true,
+        }}
+      />
       {children}
       <SiteFooter contactEmail={contactEmail(settings)} rail={rail} />
     </>

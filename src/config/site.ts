@@ -186,3 +186,38 @@ export function branchLabel(id: string): string {
 export function isBranchOffered(id: string, admissionYear: number): boolean {
   return branchesForYear(admissionYear).some((branch) => branch.id === id);
 }
+
+export type OfferKind = "mentoring" | "internship";
+
+export function parseOfferKind(value: string | undefined): OfferKind | null {
+  if (value === "mentoring" || value === "internship") return value;
+  return null;
+}
+
+export function sanitizeSearch(value: string | undefined, max = 80): string {
+  if (!value) return "";
+  return value.replace(/[%_\\]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
+}
+
+export function directoryHref(options: {
+  q?: string;
+  year?: number | null;
+  branch?: string | null;
+  page?: number;
+}): string {
+  const params = new URLSearchParams();
+  if (options.q) params.set("q", options.q);
+  if (options.year) params.set("year", String(options.year));
+  if (options.branch) params.set("branch", options.branch);
+  if (options.page && options.page > 1) params.set("page", String(options.page));
+  const query = params.toString();
+  return query ? `/people?${query}` : "/people";
+}
+
+export function offersHref(options: { kind?: OfferKind | null; page?: number }): string {
+  const params = new URLSearchParams();
+  if (options.kind) params.set("kind", options.kind);
+  if (options.page && options.page > 1) params.set("page", String(options.page));
+  const query = params.toString();
+  return query ? `/offers?${query}` : "/offers";
+}

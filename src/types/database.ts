@@ -14,6 +14,7 @@ export type CommentStatus = "visible" | "hidden" | "removed";
 export type ReportStatus = "open" | "actioned" | "dismissed";
 export type ParentKind = "photo" | "article";
 export type ReportTarget = "photo" | "article" | "comment" | "profile";
+export type OfferKind = "mentoring" | "internship";
 
 type Timestamps = {
   created_at: string;
@@ -39,6 +40,9 @@ export type Database = {
           consent_accepted_at: string | null;
           consent_version: string | null;
           directory_opt_in: boolean;
+          directory_show_city: boolean;
+          directory_show_role: boolean;
+          directory_show_bio: boolean;
           deleted_at: string | null;
           created_at: string;
           updated_at: string;
@@ -287,6 +291,47 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["monthly_prompts"]["Row"]>;
         Relationships: [];
       };
+      mentoring_offers: {
+        Row: {
+          id: string;
+          author_id: string | null;
+          kind: OfferKind;
+          title: string;
+          body: string;
+          city: string | null;
+          status: ContentStatus;
+          moderator_id: string | null;
+          moderated_at: string | null;
+          rejection_reason: string | null;
+          anonymised: boolean;
+          deleted_at: string | null;
+        } & Timestamps;
+        Insert: {
+          author_id?: string | null;
+          kind: OfferKind;
+          title: string;
+          body?: string;
+          city?: string | null;
+          status?: ContentStatus;
+        };
+        Update: Partial<Database["public"]["Tables"]["mentoring_offers"]["Row"]>;
+        Relationships: [];
+      };
+      mentoring_interest: {
+        Row: {
+          offer_id: string;
+          member_id: string;
+          note: string | null;
+          created_at: string;
+        };
+        Insert: {
+          offer_id: string;
+          member_id: string;
+          note?: string | null;
+        };
+        Update: never;
+        Relationships: [];
+      };
       audit_log: {
         Row: {
           id: number;
@@ -320,6 +365,10 @@ export type Database = {
           current_city: string | null;
           current_role: string | null;
           created_at: string;
+          directory_opt_in: boolean | null;
+          directory_show_city: boolean | null;
+          directory_show_role: boolean | null;
+          directory_show_bio: boolean | null;
         };
         Insert: never;
         Update: never;
@@ -355,6 +404,7 @@ export type Database = {
       report_status: ReportStatus;
       parent_kind: ParentKind;
       report_target: ReportTarget;
+      offer_kind: OfferKind;
     };
     CompositeTypes: Record<string, never>;
   };

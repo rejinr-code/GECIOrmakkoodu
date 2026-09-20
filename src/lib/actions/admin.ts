@@ -86,6 +86,8 @@ export async function saveSettings(formData: FormData): Promise<void> {
   const commentLimit = Number(formData.get("comment_limit_per_day"));
   const featureComments = formData.get("feature_comments") === "on";
   const featureMonthlyPrompt = formData.get("feature_monthly_prompt") === "on";
+  const featureDirectory = formData.get("feature_directory") === "on";
+  const featureMentoring = formData.get("feature_mentoring") === "on";
 
   const { error } = await supabase
     .from("settings")
@@ -96,6 +98,8 @@ export async function saveSettings(formData: FormData): Promise<void> {
       comment_limit_per_day: commentLimit,
       feature_comments: featureComments,
       feature_monthly_prompt: featureMonthlyPrompt,
+      feature_directory: featureDirectory,
+      feature_mentoring: featureMentoring,
       updated_by: session.userId,
     })
     .eq("id", 1);
@@ -272,6 +276,31 @@ export async function moderateArticle(formData: FormData): Promise<void> {
   if (slug) revalidatePath(`/articles/${slug}`);
   revalidatePath("/articles");
   revalidatePath("/");
+  revalidatePath("/account");
+}
+
+export async function moderateOffer(formData: FormData): Promise<void> {
+  const { supabase } = await requireStaff();
+  const id = String(formData.get("id") ?? "");
+  const decision = String(formData.get("decision") ?? "");
+  const reason = String(formData.get("rejection_reason") ?? "").trim();
+  if (!id) throw new Error("Missing offer.");
+  if (decision !== "approved" && decision !== "rejected") {
+    throw new Error("Choose approve or reject.");
+  }
+
+  const { error } = await supabase
+    .from("mentoring_offers")
+    .update({
+      status: decision,
+      rejection_reason: decision === "rejected" ? reason || "Not suitable for the board." : null,
+    })
+    .eq("id", id);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/offers");
+  revalidatePath(`/offers/${id}`);
+  revalidatePath("/offers");
   revalidatePath("/account");
 }
 
