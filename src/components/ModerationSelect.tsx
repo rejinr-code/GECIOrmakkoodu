@@ -97,7 +97,7 @@ export function SelectBox({ id, label }: { id: string; label: string }) {
         checked={selection.selected.has(id)}
         onChange={() => selection.toggle(id)}
       />
-      {label}
+      <span className="sr-only">{label}</span>
     </label>
   );
 }

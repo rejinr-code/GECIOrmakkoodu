@@ -53,16 +53,41 @@ export default async function RegisterPage() {
         </button>
       </form>
 
-      <ul className="mt-12 space-y-3">
-        {rows.map((row) => (
-          <li key={row.id} className="text-caption">
-            <span className="text-ink">{row.name}</span>{" "}
-            <span className="text-muted">
-              {formatBatchLabel(row.batch_year)} {row.branch}
-            </span>
-          </li>
-        ))}
-      </ul>
+      {rows.length === 0 ? (
+        <p className="mt-12 text-lead">No one on the list yet.</p>
+      ) : (
+        <div className="mt-12 overflow-x-auto">
+          <table className="w-full min-w-[36rem] text-left">
+            <caption className="sr-only">Alumni list</caption>
+            <thead>
+              <tr className="border-b border-ink/12 text-caption text-muted">
+                <th scope="col" className="py-3 pr-4 font-medium">
+                  Name
+                </th>
+                <th scope="col" className="py-3 pr-4 font-medium">
+                  Batch
+                </th>
+                <th scope="col" className="py-3 pr-4 font-medium">
+                  Branch
+                </th>
+                <th scope="col" className="py-3 font-medium">
+                  Notes
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id} className="border-b border-ink/8">
+                  <td className="py-3 pr-4 font-medium">{row.name}</td>
+                  <td className="py-3 pr-4 text-muted">{formatBatchLabel(row.batch_year)}</td>
+                  <td className="py-3 pr-4 text-muted">{row.branch}</td>
+                  <td className="py-3 text-caption text-muted">{row.notes ?? ""}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </main>
   );
 }

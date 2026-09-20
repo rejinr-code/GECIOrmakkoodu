@@ -58,16 +58,43 @@ export default async function AdminBatchesPage() {
         </button>
       </form>
 
-      <ul className="mt-12 space-y-4">
-        {groups.map((group) => (
-          <li key={`${group.batch_year}-${group.branch}`}>
-            <p className="font-medium">
-              {formatBatchLabel(group.batch_year)} {group.branch}
-            </p>
-            <p className="text-caption text-muted">{group.coordinator_name}</p>
-          </li>
-        ))}
-      </ul>
+      {groups.length === 0 ? (
+        <p className="mt-12 text-lead">No batch groups yet.</p>
+      ) : (
+        <div className="mt-12 overflow-x-auto">
+          <table className="w-full min-w-[40rem] text-left">
+            <caption className="sr-only">Batch groups</caption>
+            <thead>
+              <tr className="border-b border-ink/12 text-caption text-muted">
+                <th scope="col" className="py-3 pr-4 font-medium">
+                  Batch
+                </th>
+                <th scope="col" className="py-3 pr-4 font-medium">
+                  Branch
+                </th>
+                <th scope="col" className="py-3 pr-4 font-medium">
+                  Coordinator
+                </th>
+                <th scope="col" className="py-3 font-medium">
+                  Invite
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {groups.map((group) => (
+                <tr key={`${group.batch_year}-${group.branch}`} className="border-b border-ink/8">
+                  <td className="py-3 pr-4 font-medium">{formatBatchLabel(group.batch_year)}</td>
+                  <td className="py-3 pr-4 text-muted">{group.branch}</td>
+                  <td className="py-3 pr-4 text-muted">{group.coordinator_name ?? ""}</td>
+                  <td className="max-w-xs truncate py-3 text-caption text-muted">
+                    {group.whatsapp_invite_url ?? ""}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </main>
   );
 }

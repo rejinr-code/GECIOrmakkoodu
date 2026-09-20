@@ -33,43 +33,62 @@ export default async function VolunteersPage() {
       {people.length === 0 ? (
         <p className="mt-10 text-lead">No verified members yet.</p>
       ) : (
-        <ul className="mt-10 space-y-6">
-          {people.map((person) => (
-            <li
-              key={person.id}
-              className="flex flex-wrap items-end justify-between gap-4 border-t border-ink/8 pt-5"
-            >
-              <div>
-                <p className="font-medium">{person.name}</p>
-                <p className="text-caption text-muted">
-                  {person.batch_year ? formatBatchLabel(person.batch_year) : null}
-                  {person.batch_year && person.branch ? " · " : null}
-                  {person.branch ? branchLabel(person.branch) : null}
-                </p>
-              </div>
-              <form action={setMemberRole} className="flex flex-wrap items-end gap-2">
-                <input type="hidden" name="id" value={person.id} />
-                <label className="block">
-                  <span className="sr-only">Role</span>
-                  <select
-                    name="role"
-                    defaultValue={person.role}
-                    className="field-ink min-w-48"
-                  >
-                    {roles.map((role) => (
-                      <option key={role.id} value={role.id}>
-                        {role.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <button type="submit" className="btn btn-green">
-                  Save
-                </button>
-              </form>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-10 overflow-x-auto">
+          <table className="w-full min-w-[40rem] text-left">
+            <caption className="sr-only">Verified members and their roles</caption>
+            <thead>
+              <tr className="border-b border-ink/12 text-caption text-muted">
+                <th scope="col" className="py-3 pr-4 font-medium">
+                  Name
+                </th>
+                <th scope="col" className="py-3 pr-4 font-medium">
+                  Batch
+                </th>
+                <th scope="col" className="py-3 pr-4 font-medium">
+                  Branch
+                </th>
+                <th scope="col" className="py-3 font-medium">
+                  Role
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {people.map((person) => (
+                <tr key={person.id} className="border-b border-ink/8 align-middle">
+                  <td className="py-4 pr-4 font-medium">{person.name}</td>
+                  <td className="py-4 pr-4 text-muted">
+                    {person.batch_year ? formatBatchLabel(person.batch_year) : "Unknown"}
+                  </td>
+                  <td className="py-4 pr-4 text-muted">
+                    {person.branch ? branchLabel(person.branch) : "Unknown"}
+                  </td>
+                  <td className="py-4">
+                    <form action={setMemberRole} className="flex flex-wrap items-end gap-2">
+                      <input type="hidden" name="id" value={person.id} />
+                      <label className="block">
+                        <span className="sr-only">Role</span>
+                        <select
+                          name="role"
+                          defaultValue={person.role}
+                          className="field-ink min-w-48"
+                        >
+                          {roles.map((role) => (
+                            <option key={role.id} value={role.id}>
+                              {role.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <button type="submit" className="btn btn-green">
+                        Save
+                      </button>
+                    </form>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </main>
   );
