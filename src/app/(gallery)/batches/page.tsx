@@ -1,4 +1,4 @@
-import { branchLabel, formatBatchLabel, siteConfig } from "@/config/site";
+import { branchLabel, formatBatchLabel } from "@/config/site";
 import { listBatchGroups, listPublicBatchGroups } from "@/lib/data";
 import { getSession, isVerified } from "@/lib/session";
 
@@ -68,10 +68,6 @@ export default async function BatchesPage() {
           ))}
         </div>
       )}
-
-      <p className="mt-16 max-w-prose text-caption text-muted">
-        {siteConfig.association.disclaimer}
-      </p>
     </main>
   );
 }

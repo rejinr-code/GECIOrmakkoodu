@@ -7,7 +7,7 @@ export const metadata = {
 
 export default function AboutPage() {
   const rest = `
-It is run by **${siteConfig.association.fullName}** volunteers. The first maintainers came from the ${siteConfig.association.foundingMaintainerBatch} batch. ${siteConfig.association.disclaimer}
+It is run by **${siteConfig.association.fullName}**.
 
 Looking does not require an account. Contributing does. New accounts stay pending until a volunteer checks them against the alumni list.
 

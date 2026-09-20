@@ -41,11 +41,8 @@ export function SiteFooter({
             </span>
           </p>
           <p className="mt-2 max-w-sm">
-            {siteConfig.tagline}, kept by {siteConfig.association.fullName}{" "}
-            volunteers. First maintained by the{" "}
-            {siteConfig.association.foundingMaintainerBatch} batch.
+            {siteConfig.tagline}, kept by {siteConfig.association.fullName}.
           </p>
-          <p className="mt-3 max-w-prose">{siteConfig.association.disclaimer}</p>
         </div>
         <div className="flex flex-col gap-1 sm:items-end">
           <div className="flex flex-wrap gap-x-5 gap-y-1 sm:justify-end">

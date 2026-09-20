@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     default: `${siteConfig.name} — ${siteConfig.tagline}`,
     template: `%s — ${siteConfig.name}`,
   },
-  description: `${siteConfig.name} (${siteConfig.nameMl}) is ${siteConfig.meaning}: a photograph and writing archive run by ${siteConfig.association.fullName}. ${siteConfig.association.disclaimer}`,
+  description: `${siteConfig.name} (${siteConfig.nameMl}) is ${siteConfig.meaning}: a photograph and writing archive run by ${siteConfig.association.fullName}.`,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

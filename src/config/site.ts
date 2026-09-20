@@ -22,10 +22,6 @@ export const siteConfig = {
     openedYear: 2000,
     /** Used to render "2007–2011" from an admission year. */
     programmeYears: 4,
-    /** Displayed as volunteer provenance, not as an institutional claim. */
-    foundingMaintainerBatch: "2007–2011",
-    disclaimer:
-      "Ormakkoodu is built and run by GECIAN alumni volunteers. Government Engineering College Idukki has no ownership, role, or responsibility for this archive.",
   },
   logo: {
     src: "/branding/geci-idukki.png",

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { InterestForm } from "@/components/InterestForm";
 import { OfferForm } from "@/components/OfferForm";
 import { PaperPage } from "@/components/MarkdownBody";
-import { branchLabel, formatBatchLabel, siteConfig } from "@/config/site";
+import { branchLabel, formatBatchLabel } from "@/config/site";
 import {
   getSettings,
   getVisibleOffer,
@@ -117,8 +117,6 @@ export default async function OfferPage({ params }: Props) {
           </ul>
         </section>
       ) : null}
-
-      <p className="mt-16 text-caption text-muted">{siteConfig.association.disclaimer}</p>
     </PaperPage>
   );
 }
