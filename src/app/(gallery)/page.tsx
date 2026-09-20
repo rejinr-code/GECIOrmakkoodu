@@ -92,7 +92,7 @@ export default async function Home({ searchParams }: HomeProps) {
                 <p className="mt-1 text-caption text-muted">
                   {showAllAlbums
                     ? "Every admission year, oldest first. Each cover is the most liked photograph from that batch."
-                    : "Oldest first. Each cover is the most liked photograph from that batch."}
+                    : `From the ${formatBatchLabel(siteConfig.association.openedYear)} batch. Each cover is the most liked photograph from that year.`}
                 </p>
                 <div className="mt-6">
                   <YearAlbumGrid

@@ -271,7 +271,7 @@ export async function listYearAlbums(limit?: number): Promise<YearAlbum[]> {
     );
 
   if (!isSupabaseConfigured()) {
-    const chosen = limit ? years.slice(-limit) : years;
+    const chosen = limit ? years.slice(0, limit) : years;
     return chosen.map((year) => ({ year, count: 0, cover: null }));
   }
 
@@ -332,19 +332,7 @@ export async function listYearAlbums(limit?: number): Promise<YearAlbum[]> {
     return take(years);
   }
 
-  const withPhotos = years.filter((year) => (byYear.get(year)?.length ?? 0) > 0);
-  const newestFirst = [...years].reverse();
-  const chosen: number[] = [];
-  for (const year of withPhotos) {
-    if (chosen.length >= limit) break;
-    chosen.push(year);
-  }
-  for (const year of newestFirst) {
-    if (chosen.length >= limit) break;
-    if (chosen.includes(year)) continue;
-    chosen.push(year);
-  }
-  return take(chosen);
+  return take(years.slice(0, limit));
 }
 
 export async function listRememberedPhotos(limit = 12): Promise<PhotoCard[]> {
