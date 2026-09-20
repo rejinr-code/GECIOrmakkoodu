@@ -33,6 +33,9 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           </Link>
           {admin ? (
             <>
+              <Link href="/admin/volunteers" className="inline-flex min-h-11 items-center">
+                Volunteers
+              </Link>
               <Link href="/admin/register" className="inline-flex min-h-11 items-center">
                 Alumni list
               </Link>

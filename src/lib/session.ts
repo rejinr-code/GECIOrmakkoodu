@@ -34,6 +34,15 @@ export function isAdmin(profile: Profile | null): boolean {
   return profile?.role === "admin";
 }
 
+export function canVerifyProfile(
+  staff: Profile | null,
+  person: { batch_year: number | null; branch: string | null },
+): boolean {
+  if (isAdmin(staff)) return true;
+  if (!isStaff(staff) || !staff?.batch_year || !staff.branch) return false;
+  return person.batch_year === staff.batch_year && person.branch === staff.branch;
+}
+
 export const getSession = cache(async (): Promise<SessionState> => {
   if (!isSupabaseConfigured()) {
     return { userId: null, email: null, profile: null };

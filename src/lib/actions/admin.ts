@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { getSession, isAdmin, isStaff } from "@/lib/session";
+import { getSession, canVerifyProfile, isAdmin, isStaff } from "@/lib/session";
 
 async function requireAdmin() {
   const session = await getSession();
@@ -34,12 +34,54 @@ export async function setVerification(
   userId: string,
   status: "verified" | "rejected",
 ): Promise<void> {
-  const { supabase } = await requireAdmin();
+  const { session, supabase } = await requireStaff();
+  const { data: person, error: loadError } = await supabase
+    .from("profiles")
+    .select("batch_year, branch")
+    .eq("id", userId)
+    .maybeSingle();
+  if (loadError) throw new Error(loadError.message);
+  if (!person) throw new Error("No such member.");
+  if (!canVerifyProfile(session.profile, person)) {
+    throw new Error("You can only verify alumni from your batch and branch.");
+  }
   const { error } = await supabase
     .from("profiles")
     .update({ status })
     .eq("id", userId);
   if (error) throw new Error(error.message);
+  revalidatePath("/admin");
+}
+
+export async function setMemberRole(formData: FormData): Promise<void> {
+  const { session, supabase } = await requireAdmin();
+  const userId = String(formData.get("id") ?? "").trim();
+  const role = String(formData.get("role") ?? "").trim();
+  if (!userId) throw new Error("Choose a member.");
+  if (role !== "member" && role !== "moderator" && role !== "admin") {
+    throw new Error("Choose member, batch representative, or admin.");
+  }
+  if (userId === session.userId && role !== "admin") {
+    throw new Error("You cannot remove your own admin access.");
+  }
+
+  const { data: person, error: loadError } = await supabase
+    .from("profiles")
+    .select("status")
+    .eq("id", userId)
+    .maybeSingle();
+  if (loadError) throw new Error(loadError.message);
+  if (!person) throw new Error("No such member.");
+  if (role !== "member" && person.status !== "verified") {
+    throw new Error("Verify them first, then make them a representative.");
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .update({ role })
+    .eq("id", userId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/volunteers");
   revalidatePath("/admin");
 }
 
@@ -200,6 +242,39 @@ export async function dismissCommentReport(formData: FormData): Promise<void> {
     .eq("status", "open");
   if (error) throw new Error(error.message);
   revalidatePath("/admin/reports");
+}
+
+export async function removePublishedItem(formData: FormData): Promise<void> {
+  const { supabase } = await requireStaff();
+  const targetType = String(formData.get("target_type") ?? "");
+  const targetId = String(formData.get("target_id") ?? "");
+  if (!targetId) throw new Error("Choose an item to hide.");
+  if (targetType !== "photo" && targetType !== "article") {
+    throw new Error("Choose a photograph or letter.");
+  }
+
+  if (targetType === "photo") {
+    const { error } = await supabase
+      .from("photos")
+      .update({ status: "removed" })
+      .eq("id", targetId);
+    if (error) throw new Error(error.message);
+    revalidatePath(`/photos/${targetId}`);
+    revalidatePath("/");
+    revalidatePath("/account");
+    return;
+  }
+
+  const slug = String(formData.get("slug") ?? "").trim();
+  const { error } = await supabase
+    .from("articles")
+    .update({ status: "removed" })
+    .eq("id", targetId);
+  if (error) throw new Error(error.message);
+  if (slug) revalidatePath(`/articles/${slug}`);
+  revalidatePath("/articles");
+  revalidatePath("/");
+  revalidatePath("/account");
 }
 
 export async function removeReportedItem(formData: FormData): Promise<void> {

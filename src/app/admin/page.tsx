@@ -1,6 +1,6 @@
 import { branchLabel, formatBatchLabel } from "@/config/site";
 import { listAlumniRegister, listPendingProfiles } from "@/lib/data";
-import { getSession, isAdmin } from "@/lib/session";
+import { canVerifyProfile, getSession, isAdmin, isStaff } from "@/lib/session";
 import { approveMember, rejectMember } from "@/app/admin/actions";
 
 export const metadata = { title: "Verification" };
@@ -8,7 +8,7 @@ export const metadata = { title: "Verification" };
 export default async function AdminPage() {
   const session = await getSession();
   const pending = await listPendingProfiles();
-  const register = isAdmin(session.profile) ? await listAlumniRegister() : [];
+  const register = isStaff(session.profile) ? await listAlumniRegister() : [];
 
   return (
     <main className="px-4 py-10 sm:px-8">
@@ -16,6 +16,9 @@ export default async function AdminPage() {
       <p className="mt-3 max-w-prose text-muted">
         Approve people who appear on the alumni list. After approval they must
         sign out and back in so their token picks up verified status.
+        {isAdmin(session.profile)
+          ? " You can verify any batch. Batch representatives only verify their own year and branch."
+          : " You can verify alumni from your own batch and branch."}
       </p>
 
       {pending.length === 0 ? (
@@ -28,6 +31,7 @@ export default async function AdminPage() {
                 row.batch_year === person.batch_year &&
                 row.branch === person.branch,
             );
+            const canAct = canVerifyProfile(session.profile, person);
             return (
               <li key={person.id} className="border-t border-ink/8 pt-6">
                 <p className="text-lead font-medium">{person.name}</p>
@@ -44,7 +48,7 @@ export default async function AdminPage() {
                     No row on the alumni list for that batch and branch.
                   </p>
                 )}
-                {isAdmin(session.profile) ? (
+                {canAct ? (
                   <div className="mt-4 flex flex-wrap gap-3">
                     <form action={approveMember}>
                       <input type="hidden" name="id" value={person.id} />
@@ -62,7 +66,12 @@ export default async function AdminPage() {
                       </button>
                     </form>
                   </div>
-                ) : null}
+                ) : (
+                  <p className="mt-3 text-caption text-muted">
+                    A representative for this batch and branch, or an admin, can
+                    verify them.
+                  </p>
+                )}
               </li>
             );
           })}

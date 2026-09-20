@@ -572,6 +572,23 @@ export async function listPendingProfiles() {
   return data ?? [];
 }
 
+export async function listVerifiedMembers(): Promise<
+  Pick<
+    Database["public"]["Tables"]["profiles"]["Row"],
+    "id" | "name" | "batch_year" | "branch" | "role" | "status"
+  >[]
+> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("profiles")
+    .select("id, name, batch_year, branch, role, status")
+    .eq("status", "verified")
+    .is("deleted_at", null)
+    .order("name", { ascending: true });
+  return data ?? [];
+}
+
 export async function listAlumniRegister() {
   if (!isSupabaseConfigured()) return [];
   const supabase = await createServerSupabaseClient();

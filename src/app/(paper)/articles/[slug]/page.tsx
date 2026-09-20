@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ContributorLink } from "@/components/ContributorLink";
 import { FlagItemForm } from "@/components/FlagItemForm";
+import { StaffRemoveForm } from "@/components/StaffRemoveForm";
 import { MarkdownBody, PaperPage } from "@/components/MarkdownBody";
 import { PhotoEngagement } from "@/components/PhotoEngagement";
 import { formatBatchLabel, siteConfig } from "@/config/site";
@@ -116,7 +117,7 @@ export default async function ArticlePage({ params }: Props) {
         </p>
       ) : null}
       {isPublic ? (
-        <p className="mt-12 flex flex-wrap items-center gap-x-6 gap-y-2 text-caption">
+        <div className="mt-12 flex flex-wrap items-center gap-x-6 gap-y-2 text-caption">
           {email ? (
             <a
               href={removalMailto({
@@ -138,12 +139,20 @@ export default async function ArticlePage({ params }: Props) {
             />
           ) : null}
           {alreadyFlagged ? <span className="text-muted">Flagged for review</span> : null}
+          {staff ? (
+            <StaffRemoveForm
+              targetType="article"
+              targetId={article.id}
+              slug={article.slug}
+              label="Hide letter"
+            />
+          ) : null}
           {!session.userId ? (
             <Link href="/sign-in" className="underline underline-offset-4">
               Sign in to flag
             </Link>
           ) : null}
-        </p>
+        </div>
       ) : null}
       {commentsEnabled ? (
         <PhotoEngagement

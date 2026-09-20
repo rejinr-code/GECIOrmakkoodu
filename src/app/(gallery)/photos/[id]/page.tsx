@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ContributorLink } from "@/components/ContributorLink";
 import { DownloadPrint } from "@/components/DownloadPrint";
 import { FlagItemForm } from "@/components/FlagItemForm";
+import { StaffRemoveForm } from "@/components/StaffRemoveForm";
 import { PhotoEngagement } from "@/components/PhotoEngagement";
 import { PhotoLightbox } from "@/components/PhotoLightbox";
 import {
@@ -187,7 +188,7 @@ export default async function PhotoPage({ params, searchParams }: Props) {
               Named: {photo.people_tagged.join(", ")}
             </p>
           ) : null}
-          <p className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-caption">
+          <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2 text-caption">
             {isPublic ? (
               <a href={itemUrl} className="inline-flex min-h-11 items-center">
                 Shareable link
@@ -219,12 +220,19 @@ export default async function PhotoPage({ params, searchParams }: Props) {
             {alreadyFlagged ? (
               <span className="inline-flex min-h-11 items-center text-muted">Flagged for review</span>
             ) : null}
+            {staff && isPublic ? (
+              <StaffRemoveForm
+                targetType="photo"
+                targetId={photo.id}
+                label="Hide from album"
+              />
+            ) : null}
             {isPublic && !session.userId ? (
               <Link href="/sign-in" className="inline-flex min-h-11 items-center">
                 Sign in to flag
               </Link>
             ) : null}
-          </p>
+          </div>
           {commentsEnabled ? (
             <PhotoEngagement
               parentType="photo"
