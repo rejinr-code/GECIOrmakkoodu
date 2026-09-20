@@ -9,10 +9,10 @@ export const metadata = { title: "Post an offer" };
 export default async function NewOfferPage() {
   const session = await getSession();
   if (!session.userId) redirect("/sign-in");
-  if (!isVerified(session.profile)) redirect("/offers");
+  if (!isVerified(session.profile)) redirect("/");
 
   const settings = await getSettings();
-  if (settings?.feature_mentoring === false) redirect("/offers");
+  if (settings?.feature_mentoring !== true) redirect("/");
 
   return (
     <PaperPage>

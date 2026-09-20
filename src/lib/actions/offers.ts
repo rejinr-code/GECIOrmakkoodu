@@ -33,7 +33,7 @@ export async function saveOffer(formData: FormData): Promise<OfferResult> {
   }
 
   const settings = await getSettings();
-  if (settings?.feature_mentoring === false) {
+  if (settings?.feature_mentoring !== true) {
     return { error: "Offers are paused." };
   }
 
@@ -124,6 +124,11 @@ export async function expressInterest(formData: FormData): Promise<{ error?: str
   if (!session.userId) return { error: "Sign in first." };
   if (!isVerified(session.profile)) {
     return { error: "Verification comes first." };
+  }
+
+  const settings = await getSettings();
+  if (settings?.feature_mentoring !== true) {
+    return { error: "Offers are paused." };
   }
 
   const offerId = String(formData.get("offer_id") ?? "").trim();

@@ -1,11 +1,17 @@
 import Link from "next/link";
 import { ModerationSelect, SelectBox } from "@/components/ModerationSelect";
 import { moderateOffer } from "@/lib/actions/admin";
-import { listPendingOffers } from "@/lib/data";
+import { getSettings, listPendingOffers } from "@/lib/data";
+import { getSession, isStaff } from "@/lib/session";
+import { redirect } from "next/navigation";
 
 export const metadata = { title: "Offers" };
 
 export default async function AdminOffersPage() {
+  const session = await getSession();
+  if (!isStaff(session.profile)) redirect("/sign-in");
+  const settings = await getSettings();
+  if (settings?.feature_mentoring !== true) redirect("/admin");
   const pending = await listPendingOffers();
 
   return (

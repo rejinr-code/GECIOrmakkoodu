@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
+import { getSettings } from "@/lib/data";
 import { getSession, isStaff } from "@/lib/session";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
@@ -11,6 +12,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }
 
   const admin = session.profile?.role === "admin";
+  const settings = await getSettings();
+  const showOffers = settings?.feature_mentoring === true;
 
   return (
     <AppShell>
@@ -25,9 +28,11 @@ export default async function AdminLayout({ children }: { children: ReactNode })
           <Link href="/admin/letters" className="inline-flex min-h-11 items-center">
             Letters
           </Link>
-          <Link href="/admin/offers" className="inline-flex min-h-11 items-center">
-            Offers
-          </Link>
+          {showOffers ? (
+            <Link href="/admin/offers" className="inline-flex min-h-11 items-center">
+              Offers
+            </Link>
+          ) : null}
           <Link href="/admin/reports" className="inline-flex min-h-11 items-center">
             Flags
           </Link>

@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function OfferPage({ params }: Props) {
   const settings = await getSettings();
-  if (settings?.feature_mentoring === false) notFound();
+  if (settings?.feature_mentoring !== true) notFound();
 
   const { id } = await params;
   const session = await getSession();

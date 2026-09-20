@@ -14,7 +14,7 @@ type Props = {
 
 export default async function OffersPage({ searchParams }: Props) {
   const settings = await getSettings();
-  if (settings?.feature_mentoring === false) notFound();
+  if (settings?.feature_mentoring !== true) notFound();
 
   const params = await searchParams;
   const kind = parseOfferKind(params.kind);

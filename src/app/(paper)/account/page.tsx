@@ -2,7 +2,7 @@ import { AccountControls } from "@/components/AccountControls";
 import { PaperPage } from "@/components/MarkdownBody";
 import { PublicProfileForm } from "@/components/PublicProfileForm";
 import { branchLabel, formatBatchLabel } from "@/config/site";
-import { listMyArticles, listMyOffers, listMyPhotos } from "@/lib/data";
+import { listMyArticles, listMyOffers, listMyPhotos, getSettings } from "@/lib/data";
 import { getSession, isVerified } from "@/lib/session";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -14,9 +14,10 @@ export default async function AccountPage() {
   if (!session.userId) redirect("/sign-in");
 
   const profile = session.profile;
+  const showOffers = (await getSettings())?.feature_mentoring === true;
   const mine = session.userId ? await listMyPhotos(session.userId) : [];
   const letters = session.userId ? await listMyArticles(session.userId) : [];
-  const offers = session.userId ? await listMyOffers(session.userId) : [];
+  const offers = showOffers && session.userId ? await listMyOffers(session.userId) : [];
 
   return (
     <PaperPage>
@@ -52,9 +53,11 @@ export default async function AccountPage() {
             <Link href="/write" className="btn btn-quiet">
               Write a letter
             </Link>
-            <Link href="/offers/new" className="btn btn-quiet">
-              Post an offer
-            </Link>
+            {showOffers ? (
+              <Link href="/offers/new" className="btn btn-quiet">
+                Post an offer
+              </Link>
+            ) : null}
             <Link href={`/people/${session.userId}`} className="btn btn-quiet">
               Public page
             </Link>
@@ -125,7 +128,7 @@ export default async function AccountPage() {
           </ul>
         </section>
       ) : null}
-      {offers.length > 0 ? (
+      {showOffers && offers.length > 0 ? (
         <section className="mt-12">
           <h2 className="text-h3 font-medium tracking-wordmark">Your offers</h2>
           <ul className="mt-4 space-y-3">
