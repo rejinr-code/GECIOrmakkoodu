@@ -1,9 +1,11 @@
 import { allBatchYears, siteConfig, type OfferKind } from "@/config/site";
 import { publicEnv, isSupabaseConfigured } from "@/lib/env";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { imageStore } from "@/lib/imageStore.server";
 import { DIRECTORY_PAGE_SIZE } from "@/lib/profiles";
 import { OFFERS_PAGE_SIZE } from "@/lib/offers";
+import { getSession, isStaff } from "@/lib/session";
 import type { Database } from "@/types/database";
 
 export const WALL_PAGE_SIZE = 24;
@@ -562,13 +564,16 @@ export async function listPublicBatchGroups() {
 
 export async function listPendingProfiles() {
   if (!isSupabaseConfigured()) return [];
-  const supabase = await createServerSupabaseClient();
-  const { data } = await supabase
+  const session = await getSession();
+  if (!isStaff(session.profile)) return [];
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
     .from("profiles")
     .select("*")
     .eq("status", "pending")
     .is("deleted_at", null)
     .order("created_at", { ascending: true });
+  if (error) throw new Error(error.message);
   return data ?? [];
 }
 
@@ -579,13 +584,16 @@ export async function listVerifiedMembers(): Promise<
   >[]
 > {
   if (!isSupabaseConfigured()) return [];
-  const supabase = await createServerSupabaseClient();
-  const { data } = await supabase
+  const session = await getSession();
+  if (!isStaff(session.profile)) return [];
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
     .from("profiles")
     .select("id, name, batch_year, branch, role, status")
     .eq("status", "verified")
     .is("deleted_at", null)
     .order("name", { ascending: true });
+  if (error) throw new Error(error.message);
   return data ?? [];
 }
 
