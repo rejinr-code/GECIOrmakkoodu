@@ -1,0 +1,16 @@
+name: Keep Supabase awake
+
+# Free-tier projects pause after seven days without a database request.
+# This hits /api/health once a day so quiet weeks do not freeze the archive.
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping health endpoint
+        run: curl --fail --silent --show-error "${{ secrets.SITE_URL }}/api/health"

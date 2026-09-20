@@ -1,0 +1,20 @@
+name: Purge removed content
+
+# Soft-deleted photographs, articles, and comments are hidden immediately
+# and hard-deleted after settings.retention_days (default 90).
+
+on:
+  schedule:
+    - cron: "30 3 * * 0"
+  workflow_dispatch:
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call purge Edge Function
+        run: |
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "x-purge-secret: ${{ secrets.PURGE_SECRET }}" \
+            "${{ secrets.SUPABASE_URL }}/functions/v1/purge-expired"
