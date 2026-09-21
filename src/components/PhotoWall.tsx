@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatBatchLabel, photoHref } from "@/config/site";
+import { formatAlbumLabel, photoHref } from "@/config/site";
 import type { PhotoCard } from "@/lib/data";
 
 export function PhotoWall({
@@ -11,6 +11,7 @@ export function PhotoWall({
     year?: number | null;
     branch?: string | null;
     event?: string | null;
+    college?: boolean;
     view?: "timeline";
   };
 }) {
@@ -51,10 +52,12 @@ export function PhotoWall({
                   </span>
                 ) : null}
                 <span className="block font-semibold tracking-year">
-                  {formatBatchLabel(photo.batchYear)}
+                  {formatAlbumLabel(photo.batchYear)}
                   {photo.branch ? ` ${photo.branch}` : ""}
                 </span>
-                <span className="sr-only">, {photo.contributorName}</span>
+                <span className="sr-only">
+                  , Courtesy: {photo.courtesy?.trim() || photo.contributorName}
+                </span>
               </span>
               <span className="shrink-0 rounded-full bg-paper/15 px-2 py-0.5 text-caption">
                 {photo.likeCount} {photo.likeCount === 1 ? "like" : "likes"}

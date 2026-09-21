@@ -3,8 +3,10 @@ import {
   albumHref,
   branchLabel,
   formatBatchLabel,
+  isCollegeAlbum,
   isTimelineView,
   parseAdmissionYear,
+  parseAnyBranch,
   parseBranch,
   parseEventSlug,
   siteConfig,
@@ -17,6 +19,7 @@ import { PhotoWall } from "@/components/PhotoWall";
 import { YearAlbumGrid } from "@/components/YearAlbumGrid";
 import {
   listApprovedPhotos,
+  listCollegeAlbum,
   listEventTags,
   listPublishedArticles,
   listRememberedPhotos,
@@ -33,28 +36,39 @@ type HomeProps = {
     event?: string;
     view?: string;
     albums?: string;
+    album?: string;
   }>;
 };
 
 export default async function Home({ searchParams }: HomeProps) {
   const params = await searchParams;
   const timeline = isTimelineView(params.view);
+  const college = isCollegeAlbum(params.album);
   const tags = await listEventTags();
   const event = parseEventSlug(params.event, tags);
-  const year = timeline ? null : parseAdmissionYear(params.year);
-  const collection = !year && !timeline;
-  const branch = year ? parseBranch(params.branch, year) : null;
+  const year = timeline || college ? null : parseAdmissionYear(params.year);
+  const collection = !year && !timeline && !college;
+  const branch = year
+    ? parseBranch(params.branch, year)
+    : college
+      ? parseAnyBranch(params.branch)
+      : null;
   const page = Math.max(1, Number(params.page) || 1);
   const session = await getSession();
 
   if (collection) {
     const showAllAlbums = params.albums === "all";
-    const [albums, remembered, articles] = await Promise.all([
+    const [albums, collegeAlbum, remembered, articles] = await Promise.all([
       listYearAlbums(showAllAlbums ? undefined : 8),
+      listCollegeAlbum(),
       listRememberedPhotos(12),
       listPublishedArticles(4),
     ]);
-    const featured = remembered[0] ?? albums.find((album) => album.cover)?.cover ?? null;
+    const featured =
+      remembered[0] ??
+      collegeAlbum.cover ??
+      albums.find((album) => album.cover)?.cover ??
+      null;
     const verified = isVerified(session.profile);
 
     return (
@@ -97,6 +111,7 @@ export default async function Home({ searchParams }: HomeProps) {
                 <div className="mt-6">
                   <YearAlbumGrid
                     albums={albums}
+                    college={collegeAlbum}
                     moreHref={showAllAlbums ? undefined : "/?albums=all"}
                   />
                 </div>
@@ -153,6 +168,7 @@ export default async function Home({ searchParams }: HomeProps) {
   const [{ photos, total }, articles] = await Promise.all([
     listApprovedPhotos({
       batchYear: year ?? undefined,
+      college,
       branch,
       eventTag: event,
       page,
@@ -160,12 +176,13 @@ export default async function Home({ searchParams }: HomeProps) {
     listPublishedArticles(4),
   ]);
   const pageCount = Math.max(1, Math.ceil(total / WALL_PAGE_SIZE));
-  const label = year ? formatBatchLabel(year) : "Newest";
+  const label = year ? formatBatchLabel(year) : college ? "College" : "Newest";
   const eventLabel = tags.find((tag) => tag.slug === event)?.label;
   const hrefOptions = {
     year,
     branch,
     event,
+    college,
     view: timeline ? ("timeline" as const) : undefined,
   };
 
@@ -176,12 +193,24 @@ export default async function Home({ searchParams }: HomeProps) {
         <p className="mt-3 max-w-lg text-muted">
           {timeline
             ? "Photographs as they enter the archive, newest first."
-            : branch
-              ? branchLabel(branch)
-              : `Photographs from the ${label} years at ${siteConfig.association.collegeShort}.`}
+            : college
+              ? branch
+                ? `${branchLabel(branch)} photographs from faculty, office, and campus life.`
+                : `Faculty, office, and campus photographs from ${siteConfig.association.collegeShort}.`
+              : branch
+                ? branchLabel(branch)
+                : `Photographs from the ${label} years at ${siteConfig.association.collegeShort}.`}
         </p>
         {year ? <AlbumTabs year={year} branch={branch} event={event} /> : null}
-        <EventChips tags={tags} year={year} branch={branch} event={event} timeline={timeline} />
+        {college ? <AlbumTabs college branch={branch} event={event} /> : null}
+        <EventChips
+          tags={tags}
+          year={year}
+          branch={branch}
+          event={event}
+          timeline={timeline}
+          college={college}
+        />
 
         {photos.length === 0 ? (
           <div className="mt-10">
@@ -190,6 +219,7 @@ export default async function Home({ searchParams }: HomeProps) {
               branch={branch}
               eventLabel={eventLabel}
               timeline={timeline}
+              college={college}
               session={session}
             />
           </div>

@@ -5,6 +5,7 @@ import {
   allBatchYears,
   isBranchOffered,
   parseAdmissionYear,
+  parseAnyBranch,
 } from "@/config/site";
 import { getSettings } from "@/lib/data";
 import { isSupabaseConfigured } from "@/lib/env";
@@ -15,7 +16,7 @@ import {
   THUMB_MAX_BYTES,
 } from "@/lib/imageStore";
 import { imageStore } from "@/lib/imageStore.server";
-import { getSession, isAdmin, isVerified } from "@/lib/session";
+import { getSession, isStaff, isVerified } from "@/lib/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { normalizeTagLabel, PHOTO_TAG_MAX } from "@/lib/tags";
 
@@ -47,7 +48,7 @@ export async function uploadPhotograph(formData: FormData): Promise<UploadResult
 
   const session = await getSession();
   if (!session.userId) return { error: "Sign in to add a photograph." };
-  const publishNow = formData.get("publish") === "1" && isAdmin(session.profile);
+  const publishNow = formData.get("publish") === "1" && isStaff(session.profile);
   if (!publishNow && !isVerified(session.profile)) {
     return { error: "Verification comes first, then photographs." };
   }
@@ -73,17 +74,35 @@ export async function uploadPhotograph(formData: FormData): Promise<UploadResult
     return { error: "Keep the caption under 280 characters." };
   }
 
-  const batchYear = parseAdmissionYear(String(formData.get("batch_year") ?? ""));
-  if (!batchYear) return { error: "Choose a batch album." };
-  if (!allBatchYears().includes(batchYear)) {
-    return { error: "That batch is outside the archive." };
+  const college = String(formData.get("collection") ?? "") === "college";
+  if (college && !publishNow) {
+    return { error: "Only volunteers can add college photographs." };
   }
 
-  const branchRaw = String(formData.get("branch") ?? "").trim();
-  const branch = branchRaw || null;
-  if (branch && !isBranchOffered(branch, batchYear)) {
-    return { error: "That branch was not offered in this admission year." };
+  let batchYear: number | null = null;
+  let branch: string | null = null;
+  if (college) {
+    const branchRaw = String(formData.get("branch") ?? "").trim();
+    branch = parseAnyBranch(branchRaw);
+    if (branchRaw && !branch) {
+      return { error: "That department is not in the archive." };
+    }
+  } else {
+    batchYear = parseAdmissionYear(String(formData.get("batch_year") ?? ""));
+    if (!batchYear) return { error: "Choose a batch album." };
+    if (!allBatchYears().includes(batchYear)) {
+      return { error: "That batch is outside the archive." };
+    }
+    const branchRaw = String(formData.get("branch") ?? "").trim();
+    branch = branchRaw || null;
+    if (branch && !isBranchOffered(branch, batchYear)) {
+      return { error: "That branch was not offered in this admission year." };
+    }
   }
+
+  const courtesyRaw = String(formData.get("courtesy") ?? "").trim();
+  const courtesy =
+    courtesyRaw.length >= 2 ? courtesyRaw.slice(0, 80) : null;
 
   const peopleTagged = parseNames(String(formData.get("people_tagged") ?? ""));
   const width = Number(formData.get("width"));
@@ -151,6 +170,8 @@ export async function uploadPhotograph(formData: FormData): Promise<UploadResult
     alt_text: altText,
     batch_year: batchYear,
     branch,
+    collection: college ? "college" : "batch",
+    courtesy,
     event_tag: eventTag,
     people_tagged: peopleTagged,
     status: "pending",

@@ -227,7 +227,7 @@ export function PhotoViewer({
 
           <div className="border-t border-paper/15 bg-ink/30 px-4 py-4 text-paper backdrop-blur-md">
             {slide.caption ? <p className="max-w-3xl text-lead">{slide.caption}</p> : null}
-            <p className="mt-1 text-caption text-paper/70">{slide.contributorName}</p>
+            <p className="mt-1 text-caption text-paper/70">Courtesy: {slide.contributorName}</p>
             {commentsEnabled ? (
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 <LikeButton

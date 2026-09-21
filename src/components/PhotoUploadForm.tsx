@@ -19,14 +19,17 @@ export function PhotoUploadForm({
   defaultBranch,
   eventTags,
   publish = false,
+  allowCollege = false,
 }: {
   defaultYear: number;
   defaultBranch: string | null;
   eventTags: EventTag[];
   publish?: boolean;
+  allowCollege?: boolean;
 }) {
   const router = useRouter();
   const years = useMemo(() => [...allBatchYears()].reverse(), []);
+  const [album, setAlbum] = useState<"batch" | "college">("batch");
   const [year, setYear] = useState(defaultYear);
   const [branch, setBranch] = useState(defaultBranch ?? "");
   const [preview, setPreview] = useState<string | null>(null);
@@ -34,7 +37,8 @@ export function PhotoUploadForm({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const branches = branchesForYear(year);
+  const college = allowCollege && album === "college";
+  const branches = college ? siteConfig.branches : branchesForYear(year);
 
   function onYearChange(next: number) {
     setYear(next);
@@ -128,31 +132,69 @@ export function PhotoUploadForm({
       </label>
 
       <label className="block">
-        <span className="text-caption text-muted">Album</span>
-        <select
-          name="batch_year"
-          required
-          value={year}
-          onChange={(event) => onYearChange(Number(event.target.value))}
+        <span className="text-caption text-muted">Courtesy (optional)</span>
+        <input
+          name="courtesy"
+          maxLength={80}
           className="field-ink mt-1"
-        >
-          {years.map((item) => (
-            <option key={item} value={item}>
-              {formatBatchLabel(item)}
-            </option>
-          ))}
-        </select>
+          placeholder="Leave blank to credit yourself"
+        />
+        <span className="mt-1 block text-caption text-muted">
+          The name shown with this print — photographer, faculty, or office.
+        </span>
       </label>
 
+      {allowCollege ? (
+        <label className="block">
+          <span className="text-caption text-muted">Album</span>
+          <select
+            name="collection"
+            value={album}
+            onChange={(event) => {
+              const next = event.target.value === "college" ? "college" : "batch";
+              setAlbum(next);
+              setBranch("");
+            }}
+            className="field-ink mt-1"
+          >
+            <option value="batch">A batch album</option>
+            <option value="college">College — faculty, office, campus</option>
+          </select>
+        </label>
+      ) : (
+        <input type="hidden" name="collection" value="batch" />
+      )}
+
+      {college ? null : (
+        <label className="block">
+          <span className="text-caption text-muted">{allowCollege ? "Batch" : "Album"}</span>
+          <select
+            name="batch_year"
+            required
+            value={year}
+            onChange={(event) => onYearChange(Number(event.target.value))}
+            className="field-ink mt-1"
+          >
+            {years.map((item) => (
+              <option key={item} value={item}>
+                {formatBatchLabel(item)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+
       <label className="block">
-        <span className="text-caption text-muted">Branch page</span>
+        <span className="text-caption text-muted">
+          {college ? "Related department (optional)" : "Branch page"}
+        </span>
         <select
           name="branch"
           value={branch}
           onChange={(event) => setBranch(event.target.value)}
           className="field-ink mt-1"
         >
-          <option value="">Whole album (campus-wide)</option>
+          <option value="">{college ? "Whole college" : "Whole album (campus-wide)"}</option>
           {branches.map((item) => (
             <option key={item.id} value={item.id}>
               {item.label}

@@ -93,6 +93,21 @@ export function formatBatchLabel(admissionYear: number): string {
   return `${admissionYear}–${end}`;
 }
 
+export function formatAlbumLabel(admissionYear: number | null | undefined): string {
+  if (!admissionYear) return "College";
+  return formatBatchLabel(admissionYear);
+}
+
+export function isCollegeAlbum(value: string | undefined): boolean {
+  return value === "college";
+}
+
+export function parseAnyBranch(value: string | undefined): BranchId | null {
+  if (!value) return null;
+  if (!siteConfig.branches.some((branch) => branch.id === value)) return null;
+  return value as BranchId;
+}
+
 export function parseAdmissionYear(value: string | undefined, now = new Date()): number | null {
   if (!value) return null;
   const year = Number(value);
@@ -126,10 +141,14 @@ export function albumHref(options: {
   event?: string | null;
   page?: number;
   view?: "timeline";
+  college?: boolean;
 }): string {
   const params = new URLSearchParams();
   if (options.view === "timeline") {
     params.set("view", "timeline");
+  } else if (options.college) {
+    params.set("album", "college");
+    if (options.branch) params.set("branch", options.branch);
   } else if (options.year) {
     params.set("year", String(options.year));
     if (options.branch) params.set("branch", options.branch);
@@ -147,12 +166,16 @@ export function photoHref(
     branch?: string | null;
     event?: string | null;
     view?: "timeline";
+    college?: boolean;
     open?: boolean;
   },
 ): string {
   const params = new URLSearchParams();
   if (options?.view === "timeline") {
     params.set("view", "timeline");
+  } else if (options?.college) {
+    params.set("album", "college");
+    if (options?.branch) params.set("branch", options.branch);
   } else if (options?.year) {
     params.set("year", String(options.year));
     if (options.branch) params.set("branch", options.branch);

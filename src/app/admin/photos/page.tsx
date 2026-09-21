@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { formatBatchLabel } from "@/config/site";
+import { formatAlbumLabel } from "@/config/site";
 import { ModerationSelect, SelectBox } from "@/components/ModerationSelect";
 import { moderatePhoto, moderateTag } from "@/lib/actions/admin";
 import { getStorageStats, listPendingEventTags, listPendingPhotos } from "@/lib/data";
-import { getSession, isAdmin } from "@/lib/session";
+import { getSession, isAdmin, isStaff } from "@/lib/session";
 
 export const metadata = { title: "Photographs" };
 
@@ -24,11 +24,11 @@ export default async function AdminPhotosPage() {
       <h1 className="text-h1 font-medium tracking-wordmark">Photographs</h1>
       <p className="mt-3 max-w-prose text-muted">
         Member prints stay private until you approve them. New tags wait here too.
-        {isAdmin(session.profile)
-          ? " Prints you add yourself go into the album at once."
+        {isStaff(session.profile)
+          ? " Prints you add yourself go into the album at once, including College photographs."
           : ""}
       </p>
-      {isAdmin(session.profile) ? (
+      {isStaff(session.profile) ? (
         <p className="mt-6">
           <Link href="/admin/photos/add" className="btn btn-green">
             Add a photograph
@@ -174,8 +174,11 @@ export default async function AdminPhotosPage() {
                       </p>
                     </td>
                     <td className="py-4 pr-4 text-muted">
-                      {formatBatchLabel(photo.batchYear)}
-                      {photo.branch ? ` ${photo.branch}` : " · whole album"}
+                      {formatAlbumLabel(photo.batchYear)}
+                      {photo.branch ? ` ${photo.branch}` : photo.batchYear ? " · whole album" : ""}
+                      {photo.courtesy ? (
+                        <span className="mt-1 block text-caption">Courtesy: {photo.courtesy}</span>
+                      ) : null}
                       {photo.eventTags.length > 0 ? (
                         <span className="mt-1 block text-caption">
                           {photo.eventTags.map((tag, index) => (

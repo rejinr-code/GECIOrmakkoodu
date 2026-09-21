@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { albumHref, formatBatchLabel, photoHref } from "@/config/site";
+import { albumHref, formatAlbumLabel, photoHref } from "@/config/site";
 import type { PhotoCard } from "@/lib/data";
 import { isVerified, type SessionState } from "@/lib/session";
 
@@ -31,14 +31,14 @@ export function FeaturedPrint({
       )}
       <div className="px-3 pb-2 pt-5">
         <p className="text-caption text-muted">
-          {photo ? formatBatchLabel(photo.batchYear) : "The nest is waiting"}
+          {photo ? formatAlbumLabel(photo.batchYear) : "The nest is waiting"}
         </p>
         <p className="mt-1 text-h3 font-medium tracking-wordmark">
           {photo?.caption || (photo ? "Most remembered" : "The album is empty")}
         </p>
         {photo ? (
           <Link
-            href={albumHref({ year: photo.batchYear })}
+            href={albumHref(photo.batchYear ? { year: photo.batchYear } : { college: true })}
             className="mt-4 flex min-h-11 items-center justify-between rounded-full bg-surface px-4 text-caption text-ink"
           >
             See the album

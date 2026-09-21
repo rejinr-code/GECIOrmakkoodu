@@ -15,7 +15,7 @@ export type PhotoCard = {
   id: string;
   caption: string | null;
   altText: string;
-  batchYear: number;
+  batchYear: number | null;
   branch: string | null;
   width: number;
   height: number;
@@ -23,6 +23,7 @@ export type PhotoCard = {
   contributorName: string;
   contributorId: string | null;
   anonymised: boolean;
+  courtesy: string | null;
   likeCount: number;
   commentCount: number;
 };
@@ -138,6 +139,7 @@ export async function listLegalDocuments() {
 
 export async function listApprovedPhotos(options: {
   batchYear?: number;
+  college?: boolean;
   branch?: string | null;
   eventTag?: string | null;
   uploaderId?: string;
@@ -152,7 +154,7 @@ export async function listApprovedPhotos(options: {
   let query = supabase
     .from("photos")
     .select(
-      "id, caption, alt_text, batch_year, branch, width, height, thumb_key, uploader_id, anonymised",
+      "id, caption, alt_text, batch_year, branch, courtesy, width, height, thumb_key, uploader_id, anonymised",
       { count: "exact" },
     )
     .eq("status", "approved")
@@ -160,7 +162,9 @@ export async function listApprovedPhotos(options: {
     .order("created_at", { ascending: false })
     .range(from, to);
 
-  if (options.batchYear) {
+  if (options.college) {
+    query = query.is("batch_year", null);
+  } else if (options.batchYear) {
     query = query.eq("batch_year", options.batchYear);
   }
   if (options.branch) {
@@ -223,6 +227,7 @@ export async function listApprovedPhotos(options: {
           ? null
           : row.uploader_id,
       anonymised: row.anonymised,
+      courtesy: row.courtesy,
       likeCount: 0,
       commentCount: 0,
     });
@@ -304,7 +309,7 @@ export async function listYearAlbums(limit?: number): Promise<YearAlbum[]> {
   const supabase = await createServerSupabaseClient();
   const { data } = await supabase
     .from("photos")
-    .select("id, caption, alt_text, batch_year, branch, width, height, thumb_key, uploader_id, anonymised")
+    .select("id, caption, alt_text, batch_year, branch, courtesy, width, height, thumb_key, uploader_id, anonymised")
     .eq("status", "approved")
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
@@ -317,6 +322,7 @@ export async function listYearAlbums(limit?: number): Promise<YearAlbum[]> {
   );
   const byYear = new Map<number, typeof rows>();
   for (const row of rows) {
+    if (row.batch_year == null) continue;
     const list = byYear.get(row.batch_year) ?? [];
     list.push(row);
     byYear.set(row.batch_year, list);
@@ -348,6 +354,7 @@ export async function listYearAlbums(limit?: number): Promise<YearAlbum[]> {
         contributorName: "GECIAN",
         contributorId: null,
         anonymised: coverRow.anonymised,
+        courtesy: coverRow.courtesy ?? null,
         likeCount: counts.get(coverRow.id) ?? 0,
         commentCount: 0,
       };
@@ -360,6 +367,50 @@ export async function listYearAlbums(limit?: number): Promise<YearAlbum[]> {
   }
 
   return take(years.slice(0, limit));
+}
+
+export async function listCollegeAlbum(): Promise<{ count: number; cover: PhotoCard | null }> {
+  if (!isSupabaseConfigured()) return { count: 0, cover: null };
+  const supabase = await createServerSupabaseClient();
+  const { data, count } = await supabase
+    .from("photos")
+    .select(
+      "id, caption, alt_text, batch_year, branch, courtesy, width, height, thumb_key, uploader_id, anonymised",
+      { count: "exact" },
+    )
+    .eq("status", "approved")
+    .is("deleted_at", null)
+    .is("batch_year", null)
+    .order("created_at", { ascending: false })
+    .limit(24);
+  const rows = data ?? [];
+  const coverRow = rows[0];
+  if (!coverRow) return { count: count ?? 0, cover: null };
+  let thumbUrl: string | null = null;
+  try {
+    thumbUrl = await imageStore.getUrl(coverRow.thumb_key, "thumb");
+  } catch {
+    thumbUrl = null;
+  }
+  return {
+    count: count ?? rows.length,
+    cover: {
+      id: coverRow.id,
+      caption: coverRow.caption,
+      altText: coverRow.alt_text,
+      batchYear: null,
+      branch: coverRow.branch,
+      width: coverRow.width,
+      height: coverRow.height,
+      thumbUrl,
+      contributorName: "GECIAN",
+      contributorId: null,
+      anonymised: coverRow.anonymised,
+      courtesy: coverRow.courtesy ?? null,
+      likeCount: 0,
+      commentCount: 0,
+    },
+  };
 }
 
 export async function listRememberedPhotos(limit = 12): Promise<PhotoCard[]> {
@@ -385,7 +436,7 @@ export async function listRememberedPhotos(limit = 12): Promise<PhotoCard[]> {
   if (rankedIds.length > 0) {
     const { data } = await supabase
       .from("photos")
-      .select("id, caption, alt_text, batch_year, branch, width, height, thumb_key, uploader_id, anonymised")
+      .select("id, caption, alt_text, batch_year, branch, courtesy, width, height, thumb_key, uploader_id, anonymised")
       .eq("status", "approved")
       .is("deleted_at", null)
       .in("id", rankedIds);
@@ -411,6 +462,7 @@ export async function listRememberedPhotos(limit = 12): Promise<PhotoCard[]> {
         contributorName: row.anonymised ? "Former member" : "GECIAN",
         contributorId: null,
         anonymised: row.anonymised,
+        courtesy: row.courtesy ?? null,
         likeCount: counts.get(row.id) ?? 0,
         commentCount: 0,
       });
@@ -728,9 +780,10 @@ export async function listTagsForPhoto(photoId: string): Promise<PhotoTag[]> {
 }
 
 export async function getPhotoNeighbors(
-  photo: { id: string; created_at: string; batch_year: number },
+  photo: { id: string; created_at: string; batch_year: number | null },
   options: {
     timeline?: boolean;
+    college?: boolean;
     branch?: string | null;
     eventTag?: string | null;
   },
@@ -743,17 +796,20 @@ export async function getPhotoNeighbors(
     return { previousId: null, nextId: null };
   }
 
+  const college = options.college || photo.batch_year == null;
   const apply = <
     T extends {
       eq: (c: string, v: string | number) => T;
       in: (c: string, v: readonly string[]) => T;
+      is: (c: string, v: null) => T;
     },
   >(
     query: T,
   ) => {
     let next = query;
     if (!options.timeline) {
-      next = next.eq("batch_year", photo.batch_year);
+      if (college) next = next.is("batch_year", null);
+      else if (photo.batch_year != null) next = next.eq("batch_year", photo.batch_year);
     }
     if (options.branch) next = next.eq("branch", options.branch);
     if (taggedIds) next = next.in("id", taggedIds);
@@ -892,13 +948,14 @@ async function mapPhotoCards(
     id: string;
     caption: string | null;
     alt_text: string;
-    batch_year: number;
+    batch_year: number | null;
     branch: string | null;
     width: number;
     height: number;
     thumb_key: string;
     uploader_id: string | null;
     anonymised: boolean;
+    courtesy: string | null;
     status: Database["public"]["Tables"]["photos"]["Row"]["status"];
     event_tag: string | null;
     people_tagged: string[];
@@ -954,6 +1011,7 @@ async function mapPhotoCards(
           ? null
           : row.uploader_id,
       anonymised: row.anonymised,
+      courtesy: row.courtesy,
       likeCount: 0,
       commentCount: 0,
       status: row.status,
@@ -973,7 +1031,7 @@ export async function listPendingPhotos(): Promise<ModeratedPhotoCard[]> {
   const { data } = await supabase
     .from("photos")
     .select(
-      "id, caption, alt_text, batch_year, branch, width, height, thumb_key, uploader_id, anonymised, status, event_tag, people_tagged, rejection_reason, created_at",
+      "id, caption, alt_text, batch_year, branch, courtesy, width, height, thumb_key, uploader_id, anonymised, status, event_tag, people_tagged, rejection_reason, created_at",
     )
     .eq("status", "pending")
     .is("deleted_at", null)
@@ -987,7 +1045,7 @@ export async function listMyPhotos(userId: string): Promise<ModeratedPhotoCard[]
   const { data } = await supabase
     .from("photos")
     .select(
-      "id, caption, alt_text, batch_year, branch, width, height, thumb_key, uploader_id, anonymised, status, event_tag, people_tagged, rejection_reason, created_at",
+      "id, caption, alt_text, batch_year, branch, courtesy, width, height, thumb_key, uploader_id, anonymised, status, event_tag, people_tagged, rejection_reason, created_at",
     )
     .eq("uploader_id", userId)
     .is("deleted_at", null)

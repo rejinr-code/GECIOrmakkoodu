@@ -61,8 +61,10 @@ export type Database = {
           thumb_key: string;
           caption: string | null;
           alt_text: string;
-          batch_year: number;
+          batch_year: number | null;
           branch: string | null;
+          collection: "batch" | "college";
+          courtesy: string | null;
           event_tag: string | null;
           people_tagged: string[];
           status: ContentStatus;
@@ -83,8 +85,10 @@ export type Database = {
           thumb_key: string;
           caption?: string | null;
           alt_text: string;
-          batch_year: number;
+          batch_year?: number | null;
           branch?: string | null;
+          collection?: "batch" | "college";
+          courtesy?: string | null;
           event_tag?: string | null;
           people_tagged?: string[];
           status?: ContentStatus;

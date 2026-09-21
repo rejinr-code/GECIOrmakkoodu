@@ -7,19 +7,27 @@ export function EventChips({
   branch,
   event,
   timeline = false,
+  college = false,
 }: {
   tags: Array<{ slug: string; label: string }>;
   year?: number | null;
   branch?: string | null;
   event: string | null;
   timeline?: boolean;
+  college?: boolean;
 }) {
   if (tags.length === 0) return null;
+  const base = {
+    year,
+    branch,
+    college,
+    view: timeline ? ("timeline" as const) : undefined,
+  };
 
   return (
     <nav aria-label="Tags" className="mt-4 flex flex-wrap gap-1">
       <Link
-        href={albumHref({ year, branch, view: timeline ? "timeline" : undefined })}
+        href={albumHref(base)}
         className={`inline-flex min-h-9 items-center rounded-full px-3 text-caption ${
           event ? "text-muted hover:bg-ink/5" : "bg-ink/5 text-ink"
         }`}
@@ -33,10 +41,8 @@ export function EventChips({
           <Link
             key={tag.slug}
             href={albumHref({
-              year,
-              branch,
+              ...base,
               event: tag.slug,
-              view: timeline ? "timeline" : undefined,
             })}
             className={`inline-flex min-h-9 items-center rounded-full px-3 text-caption ${
               active ? "bg-ink/5 text-ink" : "text-muted hover:bg-ink/5"

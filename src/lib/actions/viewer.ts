@@ -1,6 +1,6 @@
 "use server";
 
-import { formatBatchLabel, photoHref } from "@/config/site";
+import { formatAlbumLabel, photoHref } from "@/config/site";
 import {
   getPhoto,
   getPhotoNeighbors,
@@ -21,6 +21,7 @@ export type ViewerContext = {
   year?: number | null;
   branch?: string | null;
   event?: string | null;
+  college?: boolean;
 };
 
 export type PhotoSlide = {
@@ -30,7 +31,7 @@ export type PhotoSlide = {
   caption: string | null;
   width: number;
   height: number;
-  batchYear: number;
+  batchYear: number | null;
   batchLabel: string;
   branch: string | null;
   eventLabel: string | null;
@@ -50,6 +51,7 @@ function hrefOptions(context: ViewerContext) {
     year: context.timeline ? null : context.year,
     branch: context.timeline ? null : context.branch,
     event: context.event,
+    college: context.timeline ? false : context.college,
     view: context.timeline ? ("timeline" as const) : undefined,
   };
 }
@@ -80,6 +82,7 @@ export async function loadPhotoSlide(
     listTagsForPhoto(photo.id),
     getPhotoNeighbors(photo, {
       timeline: context.timeline,
+      college: context.college,
       branch: context.branch,
       eventTag: context.event,
     }),
@@ -118,12 +121,14 @@ export async function loadPhotoSlide(
     width: photo.width,
     height: photo.height,
     batchYear: photo.batch_year,
-    batchLabel: formatBatchLabel(photo.batch_year),
+    batchLabel: formatAlbumLabel(photo.batch_year),
     branch: photo.branch,
     eventLabel: tagLine(photoTags),
-    contributorName: photo.anonymised
-      ? "Former member"
-      : (contributor?.name ?? (photo.uploader_id ? "GECIAN" : "Former member")),
+    contributorName: photo.courtesy?.trim()
+      ? photo.courtesy.trim()
+      : photo.anonymised
+        ? "Former member"
+        : (contributor?.name ?? (photo.uploader_id ? "GECIAN" : "Former member")),
     likeCount: reaction.count,
     liked: reaction.liked,
     comments,

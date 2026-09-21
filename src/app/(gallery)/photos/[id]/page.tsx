@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ContributorLink } from "@/components/ContributorLink";
+import { CourtesyLine } from "@/components/CourtesyLine";
 import { DownloadPrint } from "@/components/DownloadPrint";
 import { FlagItemForm } from "@/components/FlagItemForm";
 import { StaffRemoveForm } from "@/components/StaffRemoveForm";
@@ -9,9 +9,11 @@ import { PhotoEngagement } from "@/components/PhotoEngagement";
 import { PhotoViewer } from "@/components/PhotoViewer";
 import {
   albumHref,
-  formatBatchLabel,
+  formatAlbumLabel,
+  isCollegeAlbum,
   isTimelineView,
   parseAdmissionYear,
+  parseAnyBranch,
   parseBranch,
   parseEventSlug,
   photoHref,
@@ -44,6 +46,7 @@ type Props = {
     event?: string;
     view?: string;
     open?: string;
+    album?: string;
   }>;
 };
 
@@ -112,17 +115,24 @@ export default async function PhotoPage({ params, searchParams }: Props) {
   const tags = await listEventTags();
   const photoTags = await listTagsForPhoto(photo.id);
   const timeline = isTimelineView(query.view);
+  const college =
+    isCollegeAlbum(query.album) || (!timeline && !query.year && photo.batch_year == null);
   const event = parseEventSlug(query.event, tags);
-  const year = timeline ? null : (parseAdmissionYear(query.year) ?? photo.batch_year);
-  const branch = year ? parseBranch(query.branch, year) : null;
+  const year = timeline || college ? null : (parseAdmissionYear(query.year) ?? photo.batch_year);
+  const branch = year
+    ? parseBranch(query.branch, year)
+    : college
+      ? parseAnyBranch(query.branch)
+      : null;
   const hrefOptions = {
     year,
     branch,
     event,
+    college,
     view: timeline ? ("timeline" as const) : undefined,
   };
   const neighbors = isPublic
-    ? await getPhotoNeighbors(photo, { timeline, branch, eventTag: event })
+    ? await getPhotoNeighbors(photo, { timeline, college, branch, eventTag: event })
     : { previousId: null, nextId: null };
   const eventLabel = tagLine(photoTags);
 
@@ -149,6 +159,7 @@ export default async function PhotoPage({ params, searchParams }: Props) {
     year,
     branch,
     event,
+    college,
   };
   const slide = imageUrl
     ? {
@@ -159,10 +170,10 @@ export default async function PhotoPage({ params, searchParams }: Props) {
         width: photo.width,
         height: photo.height,
         batchYear: photo.batch_year,
-        batchLabel: formatBatchLabel(photo.batch_year),
+        batchLabel: formatAlbumLabel(photo.batch_year),
         branch: photo.branch,
         eventLabel: eventLabel ?? null,
-        contributorName,
+        contributorName: photo.courtesy?.trim() || contributorName,
         likeCount: reaction.count,
         liked: reaction.liked,
         comments,
@@ -212,7 +223,7 @@ export default async function PhotoPage({ params, searchParams }: Props) {
           ) : null}
           {photo.caption ? <p className="text-lead">{photo.caption}</p> : null}
           <p className="mt-3 font-semibold tracking-year text-gold">
-            {formatBatchLabel(photo.batch_year)}
+            {formatAlbumLabel(photo.batch_year)}
             {photo.branch ? ` ${photo.branch}` : ""}
           </p>
           {photoTags.length > 0 ? (
@@ -221,7 +232,11 @@ export default async function PhotoPage({ params, searchParams }: Props) {
                 <li key={tag.slug}>
                   {tag.status === "approved" ? (
                     <Link
-                      href={albumHref({ year: photo.batch_year, event: tag.slug })}
+                      href={albumHref({
+                        year: photo.batch_year,
+                        college: photo.batch_year == null,
+                        event: tag.slug,
+                      })}
                       className="inline-flex min-h-9 items-center rounded-full bg-ink/5 px-3 text-caption"
                     >
                       {tag.label}
@@ -236,9 +251,13 @@ export default async function PhotoPage({ params, searchParams }: Props) {
               ))}
             </ul>
           ) : null}
-          <p className="text-caption text-muted">
-            <ContributorLink id={contributorId} name={contributorName} />
-          </p>
+          <CourtesyLine
+            courtesy={photo.courtesy}
+            contributorName={contributorName}
+            contributorId={contributorId}
+            anonymised={photo.anonymised}
+            className="mt-2 text-caption text-muted"
+          />
           {photo.people_tagged.length > 0 ? (
             <p className="mt-2 text-caption text-muted">
               Named: {photo.people_tagged.join(", ")}

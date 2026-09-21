@@ -1,22 +1,25 @@
 import Link from "next/link";
-import { formatBatchLabel } from "@/config/site";
-import { isVerified, type SessionState } from "@/lib/session";
+import { formatAlbumLabel } from "@/config/site";
+import { isStaff, isVerified, type SessionState } from "@/lib/session";
 
 export function EmptyYear({
   year,
   branch,
   eventLabel,
   timeline = false,
+  college = false,
   session,
 }: {
   year?: number | null;
   branch?: string | null;
   eventLabel?: string;
   timeline?: boolean;
+  college?: boolean;
   session: SessionState;
 }) {
-  const label = year ? formatBatchLabel(year) : "archive";
+  const label = college ? "college" : year ? formatAlbumLabel(year) : "archive";
   const verified = isVerified(session.profile);
+  const staff = isStaff(session.profile);
 
   return (
     <div className="max-w-xl pt-2">
@@ -29,30 +32,47 @@ export function EmptyYear({
           ? `No ${eventLabel.toLowerCase()} photographs here yet.`
           : timeline
             ? "The archive is empty. Be the first to put a campus photograph here."
-            : branch
-              ? `The ${label} ${branch} pages are empty. Be the first to put a campus photograph here.`
-              : `The ${label} album is empty. Be the first to put a campus photograph here.`}
+            : college
+              ? "The college album is empty. Faculty, office, and campus photographs live here."
+              : branch
+                ? `The ${label} ${branch} pages are empty. Be the first to put a campus photograph here.`
+                : `The ${label} album is empty. Be the first to put a campus photograph here.`}
       </p>
-      <p className="mt-3 max-w-md text-muted">
-        Anyone can look. Adding a picture needs a verified GECIAN account — a
-        volunteer checks new members against the alumni list.
-      </p>
-      {verified ? (
-        <Link
-          href={`/contribute${year ? `?year=${year}${branch ? `&branch=${branch}` : ""}` : ""}`}
-          className="btn btn-green mt-7"
-        >
-          Add a photograph
-        </Link>
-      ) : session.userId ? (
-        <p className="mt-6 text-caption text-muted">
-          Once you are verified, this page is where your batch’s pictures will
-          live.
-        </p>
+      {college ? (
+        <>
+          <p className="mt-3 max-w-md text-muted">
+            Volunteers add these prints — they do not belong to one student batch.
+          </p>
+          {staff ? (
+            <Link href="/admin/photos/add" className="btn btn-green mt-7">
+              Add a photograph
+            </Link>
+          ) : null}
+        </>
       ) : (
-        <Link href="/join" className="btn btn-green mt-7">
-          Join and add the first photograph
-        </Link>
+        <>
+          <p className="mt-3 max-w-md text-muted">
+            Anyone can look. Adding a picture needs a verified GECIAN account — a
+            volunteer checks new members against the alumni list.
+          </p>
+          {verified ? (
+            <Link
+              href={`/contribute${year ? `?year=${year}${branch ? `&branch=${branch}` : ""}` : ""}`}
+              className="btn btn-green mt-7"
+            >
+              Add a photograph
+            </Link>
+          ) : session.userId ? (
+            <p className="mt-6 text-caption text-muted">
+              Once you are verified, this page is where your batch’s pictures will
+              live.
+            </p>
+          ) : (
+            <Link href="/join" className="btn btn-green mt-7">
+              Join and add the first photograph
+            </Link>
+          )}
+        </>
       )}
     </div>
   );

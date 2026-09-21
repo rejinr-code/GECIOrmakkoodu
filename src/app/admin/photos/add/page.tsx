@@ -7,7 +7,7 @@ import {
   parseBranch,
 } from "@/config/site";
 import { listEventTags } from "@/lib/data";
-import { getSession, isAdmin } from "@/lib/session";
+import { getSession, isStaff } from "@/lib/session";
 
 type Props = {
   searchParams: Promise<{ year?: string; branch?: string }>;
@@ -17,7 +17,7 @@ export const metadata = { title: "Add a photograph" };
 
 export default async function AdminAddPhotoPage({ searchParams }: Props) {
   const session = await getSession();
-  if (!isAdmin(session.profile)) {
+  if (!isStaff(session.profile)) {
     redirect("/admin/photos");
   }
 
@@ -33,8 +33,9 @@ export default async function AdminAddPhotoPage({ searchParams }: Props) {
     <main className="px-4 py-10 sm:px-8">
       <h1 className="text-h1 font-medium tracking-wordmark">Add a photograph</h1>
       <p className="mt-3 max-w-prose text-muted">
-        This print goes into the album at once. Tags you choose or create are
-        published with it.
+        This print goes into the album at once. Put it in a batch year, or in
+        College for faculty, office, and campus photographs. Tags you choose or
+        create are published with it.
       </p>
       <p className="mt-4 text-caption">
         <Link href="/admin/photos" className="underline underline-offset-4">
@@ -46,6 +47,7 @@ export default async function AdminAddPhotoPage({ searchParams }: Props) {
         defaultBranch={branch}
         eventTags={eventTags}
         publish
+        allowCollege
       />
     </main>
   );

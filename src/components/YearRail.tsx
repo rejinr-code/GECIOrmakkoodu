@@ -7,6 +7,7 @@ import {
   allBatchYears,
   formatBatchLabel,
   isBranchOffered,
+  isCollegeAlbum,
   parseAdmissionYear,
   parseBranch,
 } from "@/config/site";
@@ -15,11 +16,12 @@ export function GalleryYearNav() {
   const pathname = usePathname();
   const params = useSearchParams();
   const timeline = pathname === "/" && params.get("view") === "timeline";
+  const college = pathname === "/" && isCollegeAlbum(params.get("album") ?? undefined);
   const fromQuery = parseAdmissionYear(params.get("year") ?? undefined);
-  const collection = pathname === "/" && !fromQuery && !timeline;
-  const activeYear = timeline || collection ? 0 : (fromQuery ?? 0);
+  const collection = pathname === "/" && !fromQuery && !timeline && !college;
+  const activeYear = timeline || collection || college ? 0 : (fromQuery ?? 0);
   const branch =
-    pathname === "/" && !timeline && !collection && activeYear
+    pathname === "/" && !timeline && !collection && !college && activeYear
       ? parseBranch(params.get("branch") ?? undefined, activeYear)
       : null;
   const event = params.get("event");
@@ -30,6 +32,7 @@ export function GalleryYearNav() {
       event={event}
       timeline={timeline}
       collection={collection}
+      college={college}
     />
   );
 }
@@ -40,12 +43,14 @@ export function YearRail({
   event = null,
   timeline = false,
   collection = false,
+  college = false,
 }: {
   activeYear: number;
   branch?: string | null;
   event?: string | null;
   timeline?: boolean;
   collection?: boolean;
+  college?: boolean;
 }) {
   const years = allBatchYears();
 
@@ -110,8 +115,21 @@ export function YearRail({
             />
             Newest
           </a>
+          <a
+            href={albumHref({ college: true, event })}
+            className={`flex min-h-12 items-center gap-3 px-5 font-semibold tracking-year ${
+              college ? "text-[1.05rem] text-gold" : "text-caption text-muted hover:text-ink"
+            }`}
+            aria-current={college ? "page" : undefined}
+          >
+            <span
+              className={`h-8 w-0.5 shrink-0 ${college ? "bg-gold" : "bg-ink/10"}`}
+              aria-hidden
+            />
+            College
+          </a>
           {years.map((year) => {
-            const active = !timeline && year === activeYear;
+            const active = !timeline && !college && year === activeYear;
             const label = formatBatchLabel(year);
             const kept = branch && isBranchOffered(branch, year) ? branch : null;
             return (
@@ -156,8 +174,17 @@ export function YearRail({
           >
             Newest
           </a>
+          <a
+            href={albumHref({ college: true, event })}
+            className={`inline-flex min-h-11 shrink-0 items-center border-b-2 px-3 text-caption font-semibold tracking-year ${
+              college ? "border-gold text-gold" : "border-transparent text-muted"
+            }`}
+            aria-current={college ? "page" : undefined}
+          >
+            College
+          </a>
           {years.map((year) => {
-            const active = !timeline && year === activeYear;
+            const active = !timeline && !college && year === activeYear;
             const label = formatBatchLabel(year);
             const kept = branch && isBranchOffered(branch, year) ? branch : null;
             return (

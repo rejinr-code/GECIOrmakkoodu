@@ -1,7 +1,7 @@
 import { AccountControls } from "@/components/AccountControls";
 import { PaperPage } from "@/components/MarkdownBody";
 import { PublicProfileForm } from "@/components/PublicProfileForm";
-import { branchLabel, formatBatchLabel } from "@/config/site";
+import { branchLabel, formatAlbumLabel, formatBatchLabel } from "@/config/site";
 import { listMyArticles, listMyOffers, listMyPhotos, getSettings } from "@/lib/data";
 import { getSession, isVerified } from "@/lib/session";
 import Link from "next/link";
@@ -91,7 +91,7 @@ export default async function AccountPage() {
                 </Link>
                 <span className="text-muted">
                   {" "}
-                  · {formatBatchLabel(photo.batchYear)} · {photo.status}
+                  · {formatAlbumLabel(photo.batchYear)} · {photo.status}
                 </span>
                 {photo.status === "rejected" && photo.rejectionReason ? (
                   <span className="block text-muted">{photo.rejectionReason}</span>
