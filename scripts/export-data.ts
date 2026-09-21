@@ -15,6 +15,7 @@ const TABLES = [
   "alumni_register",
   "batch_groups",
   "photos",
+  "photo_tags",
   "articles",
   "comments",
   "reactions",

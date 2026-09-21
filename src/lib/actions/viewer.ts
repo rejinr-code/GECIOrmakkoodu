@@ -7,13 +7,14 @@ import {
   getPublicProfile,
   getReactionState,
   listComments,
-  listEventTags,
+  listTagsForPhoto,
   type MemoryComment,
 } from "@/lib/data";
 import { isSupabaseConfigured } from "@/lib/env";
 import { imageStore } from "@/lib/imageStore.server";
 import { getSession } from "@/lib/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { tagLine } from "@/lib/tags";
 
 export type ViewerContext = {
   timeline?: boolean;
@@ -73,10 +74,10 @@ export async function loadPhotoSlide(
   const src = await signedFull(photo.storage_key);
   if (!src) return null;
 
-  const [comments, reaction, tags, neighbors] = await Promise.all([
+  const [comments, reaction, photoTags, neighbors] = await Promise.all([
     listComments("photo", photo.id),
     getReactionState("photo", photo.id, session.userId),
-    listEventTags(),
+    listTagsForPhoto(photo.id),
     getPhotoNeighbors(photo, {
       timeline: context.timeline,
       branch: context.branch,
@@ -119,7 +120,7 @@ export async function loadPhotoSlide(
     batchYear: photo.batch_year,
     batchLabel: formatBatchLabel(photo.batch_year),
     branch: photo.branch,
-    eventLabel: tags.find((tag) => tag.slug === photo.event_tag)?.label ?? photo.event_tag,
+    eventLabel: tagLine(photoTags),
     contributorName: photo.anonymised
       ? "Former member"
       : (contributor?.name ?? (photo.uploader_id ? "GECIAN" : "Former member")),

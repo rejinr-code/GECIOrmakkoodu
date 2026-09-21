@@ -17,6 +17,7 @@ import {
 import { imageStore } from "@/lib/imageStore.server";
 import { getSession, isVerified } from "@/lib/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { normalizeTagLabel, PHOTO_TAG_MAX } from "@/lib/tags";
 
 export type UploadResult = { error: string } | { id: string };
 
@@ -83,7 +84,6 @@ export async function uploadPhotograph(formData: FormData): Promise<UploadResult
     return { error: "That branch was not offered in this admission year." };
   }
 
-  const eventTag = String(formData.get("event_tag") ?? "").trim() || null;
   const peopleTagged = parseNames(String(formData.get("people_tagged") ?? ""));
   const width = Number(formData.get("width"));
   const height = Number(formData.get("height"));
@@ -115,6 +115,32 @@ export async function uploadPhotograph(formData: FormData): Promise<UploadResult
   const thumbKey = objectKey(session.userId, photoId, "thumb");
   const supabase = await createServerSupabaseClient();
 
+  const { data: catalog } = await supabase
+    .from("event_tags")
+    .select("slug")
+    .eq("status", "approved");
+  const approvedSlugs = new Set((catalog ?? []).map((tag) => tag.slug));
+  const tagSlugs: string[] = [];
+  for (const raw of formData.getAll("tag_slugs")) {
+    const slug = String(raw).trim();
+    if (!approvedSlugs.has(slug) || tagSlugs.includes(slug)) continue;
+    tagSlugs.push(slug);
+    if (tagSlugs.length >= PHOTO_TAG_MAX) break;
+  }
+  if (tagSlugs.length < PHOTO_TAG_MAX) {
+    for (const raw of formData.getAll("new_tags")) {
+      const label = normalizeTagLabel(String(raw));
+      if (!label) continue;
+      const { data, error } = await supabase.rpc("propose_event_tag", { p_label: label });
+      if (error) return { error: error.message };
+      const slug = typeof data === "string" ? data : null;
+      if (!slug || tagSlugs.includes(slug)) continue;
+      tagSlugs.push(slug);
+      if (tagSlugs.length >= PHOTO_TAG_MAX) break;
+    }
+  }
+  const eventTag = tagSlugs[0] ?? null;
+
   const { error: insertError } = await supabase.from("photos").insert({
     id: photoId,
     uploader_id: session.userId,
@@ -141,6 +167,20 @@ export async function uploadPhotograph(formData: FormData): Promise<UploadResult
       };
     }
     return { error: insertError.message };
+  }
+
+  if (tagSlugs.length > 0) {
+    const { error: tagError } = await supabase.from("photo_tags").insert(
+      tagSlugs.map((tag_slug) => ({ photo_id: photoId, tag_slug })),
+    );
+    if (tagError) {
+      await supabase
+        .from("photos")
+        .update({ status: "removed", deleted_at: new Date().toISOString() })
+        .eq("id", photoId)
+        .eq("uploader_id", session.userId);
+      return { error: tagError.message };
+    }
   }
 
   try {

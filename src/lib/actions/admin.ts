@@ -340,6 +340,27 @@ export async function moderatePhoto(formData: FormData): Promise<void> {
   }
 }
 
+export async function moderateTag(formData: FormData): Promise<void> {
+  const { supabase } = await requireStaff();
+  const slug = String(formData.get("slug") ?? "").trim();
+  const decision = String(formData.get("decision") ?? "");
+  if (!slug) throw new Error("Choose a tag.");
+  if (decision !== "approved" && decision !== "rejected") {
+    throw new Error("Choose approve or reject.");
+  }
+
+  const { error } = await supabase
+    .from("event_tags")
+    .update({ status: decision })
+    .eq("slug", slug)
+    .eq("status", "pending");
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/photos");
+  revalidatePath("/");
+  revalidatePath("/contribute");
+}
+
 export async function moderateArticle(formData: FormData): Promise<void> {
   const { supabase } = await requireStaff();
   const ids = collectIds(formData);

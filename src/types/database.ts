@@ -244,9 +244,35 @@ export type Database = {
         Relationships: [];
       };
       event_tags: {
-        Row: { slug: string; label: string; sort_order: number };
-        Insert: Database["public"]["Tables"]["event_tags"]["Row"];
+        Row: {
+          slug: string;
+          label: string;
+          sort_order: number;
+          status: ContentStatus;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          slug: string;
+          label: string;
+          sort_order?: number;
+          status?: ContentStatus;
+          created_by?: string | null;
+        };
         Update: Partial<Database["public"]["Tables"]["event_tags"]["Row"]>;
+        Relationships: [];
+      };
+      photo_tags: {
+        Row: {
+          photo_id: string;
+          tag_slug: string;
+          created_at: string;
+        };
+        Insert: {
+          photo_id: string;
+          tag_slug: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["photo_tags"]["Row"]>;
         Relationships: [];
       };
       alumni_register: {
@@ -394,6 +420,7 @@ export type Database = {
         Args: Record<string, never>;
         Returns: Database["public"]["Tables"]["monthly_prompts"]["Row"][];
       };
+      propose_event_tag: { Args: { p_label: string }; Returns: string };
     };
     Enums: {
       user_role: UserRole;

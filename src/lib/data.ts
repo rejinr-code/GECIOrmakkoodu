@@ -6,6 +6,7 @@ import { imageStore } from "@/lib/imageStore.server";
 import { DIRECTORY_PAGE_SIZE } from "@/lib/profiles";
 import { OFFERS_PAGE_SIZE } from "@/lib/offers";
 import { getSession, isStaff } from "@/lib/session";
+import type { PhotoTag } from "@/lib/tags";
 import type { Database } from "@/types/database";
 
 export const WALL_PAGE_SIZE = 24;
@@ -166,7 +167,9 @@ export async function listApprovedPhotos(options: {
     query = query.eq("branch", options.branch);
   }
   if (options.eventTag) {
-    query = query.eq("event_tag", options.eventTag);
+    const taggedIds = await photoIdsForTag(options.eventTag);
+    if (taggedIds.length === 0) return { photos: [], total: 0 };
+    query = query.in("id", taggedIds);
   }
   if (options.uploaderId) {
     query = query.eq("uploader_id", options.uploaderId).eq("anonymised", false);
@@ -632,14 +635,96 @@ export async function listAlumniRegister() {
   return data ?? [];
 }
 
+async function photoIdsForTag(slug: string): Promise<string[]> {
+  if (!isSupabaseConfigured()) return [];
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase.from("photo_tags").select("photo_id").eq("tag_slug", slug);
+  return [...new Set((data ?? []).map((row) => row.photo_id))];
+}
+
 export async function listEventTags() {
   if (!isSupabaseConfigured()) return [];
   const supabase = await createServerSupabaseClient();
   const { data } = await supabase
     .from("event_tags")
     .select("slug, label")
+    .eq("status", "approved")
     .order("sort_order", { ascending: true });
   return data ?? [];
+}
+
+export type PendingEventTag = {
+  slug: string;
+  label: string;
+  createdAt: string;
+  creatorName: string;
+};
+
+export async function listPendingEventTags(): Promise<PendingEventTag[]> {
+  if (!isSupabaseConfigured()) return [];
+  const session = await getSession();
+  if (!isStaff(session.profile)) return [];
+  const supabase = await createServerSupabaseClient();
+  const { data } = await supabase
+    .from("event_tags")
+    .select("slug, label, created_at, created_by")
+    .eq("status", "pending")
+    .order("created_at", { ascending: true });
+  const rows = data ?? [];
+  const creatorIds = [
+    ...new Set(rows.map((row) => row.created_by).filter((id): id is string => Boolean(id))),
+  ];
+  const names = new Map<string, string>();
+  if (creatorIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("public_profiles")
+      .select("id, name")
+      .in("id", creatorIds);
+    for (const profile of profiles ?? []) names.set(profile.id, profile.name);
+  }
+  return rows.map((row) => ({
+    slug: row.slug,
+    label: row.label,
+    createdAt: row.created_at,
+    creatorName: row.created_by ? (names.get(row.created_by) ?? "GECIAN") : "GECIAN",
+  }));
+}
+
+async function loadTagsByPhotoIds(photoIds: string[]): Promise<Map<string, PhotoTag[]>> {
+  const map = new Map<string, PhotoTag[]>();
+  if (!isSupabaseConfigured() || photoIds.length === 0) return map;
+  const supabase = await createServerSupabaseClient();
+  const { data: links } = await supabase
+    .from("photo_tags")
+    .select("photo_id, tag_slug")
+    .in("photo_id", photoIds);
+  const slugs = [...new Set((links ?? []).map((link) => link.tag_slug))];
+  if (slugs.length === 0) return map;
+  const { data: tags } = await supabase
+    .from("event_tags")
+    .select("slug, label, status, sort_order")
+    .in("slug", slugs);
+  const bySlug = new Map((tags ?? []).map((tag) => [tag.slug, tag]));
+  for (const link of links ?? []) {
+    const tag = bySlug.get(link.tag_slug);
+    if (!tag || tag.status === "removed") continue;
+    const list = map.get(link.photo_id) ?? [];
+    list.push({
+      slug: tag.slug,
+      label: tag.label,
+      status: tag.status === "pending" || tag.status === "rejected" ? tag.status : "approved",
+    });
+    map.set(link.photo_id, list);
+  }
+  for (const list of map.values()) {
+    list.sort((a, b) => a.label.localeCompare(b.label, "en"));
+  }
+  return map;
+}
+
+export async function listTagsForPhoto(photoId: string): Promise<PhotoTag[]> {
+  const map = await loadTagsByPhotoIds([photoId]);
+  return map.get(photoId) ?? [];
 }
 
 export async function getPhotoNeighbors(
@@ -653,13 +738,25 @@ export async function getPhotoNeighbors(
   if (!isSupabaseConfigured()) return { previousId: null, nextId: null };
   const supabase = await createServerSupabaseClient();
 
-  const apply = <T extends { eq: (c: string, v: string | number) => T }>(query: T) => {
+  const taggedIds = options.eventTag ? await photoIdsForTag(options.eventTag) : null;
+  if (options.eventTag && taggedIds && taggedIds.length === 0) {
+    return { previousId: null, nextId: null };
+  }
+
+  const apply = <
+    T extends {
+      eq: (c: string, v: string | number) => T;
+      in: (c: string, v: readonly string[]) => T;
+    },
+  >(
+    query: T,
+  ) => {
     let next = query;
     if (!options.timeline) {
       next = next.eq("batch_year", photo.batch_year);
     }
     if (options.branch) next = next.eq("branch", options.branch);
-    if (options.eventTag) next = next.eq("event_tag", options.eventTag);
+    if (taggedIds) next = next.in("id", taggedIds);
     return next;
   };
 
@@ -784,6 +881,7 @@ export async function listOpenItemReports(): Promise<OpenItemReport[]> {
 export type ModeratedPhotoCard = PhotoCard & {
   status: Database["public"]["Tables"]["photos"]["Row"]["status"];
   eventTag: string | null;
+  eventTags: PhotoTag[];
   peopleTagged: string[];
   rejectionReason: string | null;
   createdAt: string;
@@ -828,6 +926,8 @@ async function mapPhotoCards(
     }
   }
 
+  const tagMap = await loadTagsByPhotoIds(rows.map((row) => row.id));
+
   const photos: ModeratedPhotoCard[] = [];
   for (const row of rows) {
     let thumbUrl: string | null = null;
@@ -857,7 +957,8 @@ async function mapPhotoCards(
       likeCount: 0,
       commentCount: 0,
       status: row.status,
-      eventTag: row.event_tag,
+      eventTag: (tagMap.get(row.id)?.[0]?.slug ?? row.event_tag) ?? null,
+      eventTags: tagMap.get(row.id) ?? [],
       peopleTagged: row.people_tagged,
       rejectionReason: row.rejection_reason,
       createdAt: row.created_at,

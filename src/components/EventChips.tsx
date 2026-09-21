@@ -17,7 +17,7 @@ export function EventChips({
   if (tags.length === 0) return null;
 
   return (
-    <nav aria-label="Events" className="mt-4 flex flex-wrap gap-1">
+    <nav aria-label="Tags" className="mt-4 flex flex-wrap gap-1">
       <Link
         href={albumHref({ year, branch, view: timeline ? "timeline" : undefined })}
         className={`inline-flex min-h-9 items-center rounded-full px-3 text-caption ${
@@ -25,7 +25,7 @@ export function EventChips({
         }`}
         aria-current={event ? undefined : "page"}
       >
-        All events
+        All tags
       </Link>
       {tags.map((tag) => {
         const active = tag.slug === event;

@@ -8,6 +8,7 @@ import { StaffRemoveForm } from "@/components/StaffRemoveForm";
 import { PhotoEngagement } from "@/components/PhotoEngagement";
 import { PhotoViewer } from "@/components/PhotoViewer";
 import {
+  albumHref,
   formatBatchLabel,
   isTimelineView,
   parseAdmissionYear,
@@ -27,11 +28,13 @@ import {
   listComments,
   listEventTags,
   listMyOpenCommentFlags,
+  listTagsForPhoto,
 } from "@/lib/data";
 import { imageStore } from "@/lib/imageStore.server";
 import { removalMailto } from "@/lib/mailto";
 import { publicEnv } from "@/lib/env";
 import { getSession, isStaff } from "@/lib/session";
+import { tagLine } from "@/lib/tags";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -107,6 +110,7 @@ export default async function PhotoPage({ params, searchParams }: Props) {
       : false;
 
   const tags = await listEventTags();
+  const photoTags = await listTagsForPhoto(photo.id);
   const timeline = isTimelineView(query.view);
   const event = parseEventSlug(query.event, tags);
   const year = timeline ? null : (parseAdmissionYear(query.year) ?? photo.batch_year);
@@ -120,7 +124,7 @@ export default async function PhotoPage({ params, searchParams }: Props) {
   const neighbors = isPublic
     ? await getPhotoNeighbors(photo, { timeline, branch, eventTag: event })
     : { previousId: null, nextId: null };
-  const eventLabel = tags.find((tag) => tag.slug === photo.event_tag)?.label ?? photo.event_tag;
+  const eventLabel = tagLine(photoTags);
 
   let imageUrl: string | null = null;
   try {
@@ -210,8 +214,28 @@ export default async function PhotoPage({ params, searchParams }: Props) {
           <p className="mt-3 font-semibold tracking-year text-gold">
             {formatBatchLabel(photo.batch_year)}
             {photo.branch ? ` ${photo.branch}` : ""}
-            {eventLabel ? ` · ${eventLabel}` : ""}
           </p>
+          {photoTags.length > 0 ? (
+            <ul className="mt-3 flex flex-wrap gap-1">
+              {photoTags.map((tag) => (
+                <li key={tag.slug}>
+                  {tag.status === "approved" ? (
+                    <Link
+                      href={albumHref({ year: photo.batch_year, event: tag.slug })}
+                      className="inline-flex min-h-9 items-center rounded-full bg-ink/5 px-3 text-caption"
+                    >
+                      {tag.label}
+                    </Link>
+                  ) : (
+                    <span className="inline-flex min-h-9 items-center rounded-full px-3 text-caption text-gold">
+                      {tag.label}
+                      {tag.status === "pending" ? " · new" : ""}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <p className="text-caption text-muted">
             <ContributorLink id={contributorId} name={contributorName} />
           </p>

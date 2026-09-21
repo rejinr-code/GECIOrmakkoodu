@@ -10,6 +10,7 @@ import {
 } from "@/config/site";
 import { compressPhotograph } from "@/lib/compressPhoto";
 import { uploadPhotograph } from "@/lib/actions/photos";
+import { PhotoTagField } from "@/components/PhotoTagField";
 
 type EventTag = { slug: string; label: string };
 
@@ -158,17 +159,7 @@ export function PhotoUploadForm({
         </select>
       </label>
 
-      <label className="block">
-        <span className="text-caption text-muted">Occasion (optional)</span>
-        <select name="event_tag" className="field-ink mt-1">
-          <option value="">Not specified</option>
-          {eventTags.map((tag) => (
-            <option key={tag.slug} value={tag.slug}>
-              {tag.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <PhotoTagField tags={eventTags} />
 
       <label className="block">
         <span className="text-caption text-muted">People you can name (optional)</span>
