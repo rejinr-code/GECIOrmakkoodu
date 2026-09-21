@@ -23,9 +23,18 @@ export default async function AdminPhotosPage() {
     <main className="px-4 py-10 sm:px-8">
       <h1 className="text-h1 font-medium tracking-wordmark">Photographs</h1>
       <p className="mt-3 max-w-prose text-muted">
-        Nothing is public until you approve it. There is no way around that.
-        New tags wait here too — they stay off the album until you accept them.
+        Member prints stay private until you approve them. New tags wait here too.
+        {isAdmin(session.profile)
+          ? " Prints you add yourself go into the album at once."
+          : ""}
       </p>
+      {isAdmin(session.profile) ? (
+        <p className="mt-6">
+          <Link href="/admin/photos/add" className="btn btn-green">
+            Add a photograph
+          </Link>
+        </p>
+      ) : null}
 
       {stats ? (
         <p className="mt-6 text-caption text-muted">

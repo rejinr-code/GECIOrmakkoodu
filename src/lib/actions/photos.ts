@@ -15,7 +15,7 @@ import {
   THUMB_MAX_BYTES,
 } from "@/lib/imageStore";
 import { imageStore } from "@/lib/imageStore.server";
-import { getSession, isVerified } from "@/lib/session";
+import { getSession, isAdmin, isVerified } from "@/lib/session";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { normalizeTagLabel, PHOTO_TAG_MAX } from "@/lib/tags";
 
@@ -47,12 +47,13 @@ export async function uploadPhotograph(formData: FormData): Promise<UploadResult
 
   const session = await getSession();
   if (!session.userId) return { error: "Sign in to add a photograph." };
-  if (!isVerified(session.profile)) {
+  const publishNow = formData.get("publish") === "1" && isAdmin(session.profile);
+  if (!publishNow && !isVerified(session.profile)) {
     return { error: "Verification comes first, then photographs." };
   }
 
   const settings = await getSettings();
-  if (settings?.feature_photos === false) {
+  if (!publishNow && settings?.feature_photos === false) {
     return { error: "Photograph upload is paused." };
   }
 
@@ -216,6 +217,25 @@ export async function uploadPhotograph(formData: FormData): Promise<UploadResult
           ? error.message
           : "The photograph details saved, but the file did not. Please try again.",
     };
+  }
+
+  if (publishNow) {
+    if (tagSlugs.length > 0) {
+      const { error: tagApproveError } = await supabase
+        .from("event_tags")
+        .update({ status: "approved" })
+        .in("slug", tagSlugs)
+        .eq("status", "pending");
+      if (tagApproveError) return { error: tagApproveError.message };
+    }
+    const { error: publishError } = await supabase
+      .from("photos")
+      .update({ status: "approved" })
+      .eq("id", photoId)
+      .eq("uploader_id", session.userId)
+      .eq("status", "pending");
+    if (publishError) return { error: publishError.message };
+    revalidatePath(`/photos/${photoId}`);
   }
 
   revalidatePath("/");

@@ -14,7 +14,13 @@ type SelectedTag = {
   label: string;
 };
 
-export function PhotoTagField({ tags }: { tags: CatalogTag[] }) {
+export function PhotoTagField({
+  tags,
+  immediate = false,
+}: {
+  tags: CatalogTag[];
+  immediate?: boolean;
+}) {
   const [selected, setSelected] = useState<SelectedTag[]>([]);
   const [draft, setDraft] = useState("");
 
@@ -138,7 +144,9 @@ export function PhotoTagField({ tags }: { tags: CatalogTag[] }) {
             </button>
           </label>
           <p className="mt-1 text-caption text-muted">
-            New tags wait for a volunteer before they appear in the album.
+            {immediate
+              ? "New tags go into the album with this print."
+              : "New tags wait for a volunteer before they appear in the album."}
           </p>
         </>
       )}

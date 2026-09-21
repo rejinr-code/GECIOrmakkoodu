@@ -18,10 +18,12 @@ export function PhotoUploadForm({
   defaultYear,
   defaultBranch,
   eventTags,
+  publish = false,
 }: {
   defaultYear: number;
   defaultBranch: string | null;
   eventTags: EventTag[];
+  publish?: boolean;
 }) {
   const router = useRouter();
   const years = useMemo(() => [...allBatchYears()].reverse(), []);
@@ -159,7 +161,9 @@ export function PhotoUploadForm({
         </select>
       </label>
 
-      <PhotoTagField tags={eventTags} />
+      {publish ? <input type="hidden" name="publish" value="1" /> : null}
+
+      <PhotoTagField tags={eventTags} immediate={publish} />
 
       <label className="block">
         <span className="text-caption text-muted">People you can name (optional)</span>
@@ -181,7 +185,7 @@ export function PhotoUploadForm({
       {error ? <p className="text-caption text-muted">{error}</p> : null}
 
       <button type="submit" className="btn btn-green" disabled={busy}>
-        {busy ? "Preparing…" : "Send for review"}
+        {busy ? "Preparing…" : publish ? "Add to the album" : "Send for review"}
       </button>
     </form>
   );
